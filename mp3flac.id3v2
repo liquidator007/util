@@ -1,0 +1,81 @@
+#!/bin/bash
+
+#mp3flac.id3v2
+#Este script recibe como entrada un directorio, comprueba si tiene ficheros .mp3, .ogg y .flac, y si los tiene
+#actualiza sus tags con id3v2 (artista, album, año). Se asume que el nombre del album esta en la carpeta
+#contenedora (y tal vez el año separado por "-"), y el del artista en el nivel superior
+#
+# RECOMENDACION: Usar con cuidado. Una carpeta de artista cada vez
+
+if [ $# -ne 1 -o ! -d "$1" ]
+then
+  printf "Uso:\n\t $0 ruta\n\n"
+  exit 1
+fi
+
+trim()
+{
+  var="$*"
+  var="${var#"${var%%[![:space:]]*}"}"   # remove leading whitespace characters
+  var="${var%"${var##*[![:space:]]}"}"   #trailing
+  printf "$var"
+}
+
+CARPETA="$1"
+
+cd "$CARPETA"
+
+ls -1 *.[mM][pP]3 >/dev/null 2>&1
+HAY_MP3=$?
+
+ls -1 *.[fF][lL][aA][cC] >/dev/null 2>&1
+HAY_FLAC=$?
+
+ls -1 *.[oO][gG][gG] >/dev/null 2>&1
+HAY_OGG=$?
+
+if [ $HAY_MP3 -eq 0 -o $HAY_FLAC -eq 0 -o $HAY_OGG -eq 0 ]
+then
+  DISCO=`basename "$PWD"`
+  cd ..
+  ARTISTA=`basename "$PWD"`
+  cd "$CARPETA"
+  POS=`expr index "$DISCO" "-"`
+  if [ $POS -eq 5 -o $POS -eq 6 ]
+  then
+    ANI="${DISCO:0:4}"
+    ANIO="--year $ANI"
+    while [ "x${DISCO:${POS}:1}x" == "x x" ]
+    do
+      let POS=POS+1
+    done
+    DISCO=${DISCO:${POS}}
+  else
+    ANI=""
+    ANIO=""
+  fi
+  for F in *.[mM][pP]3 *.[oO][gG][gG] *.[fF][lL][aA][cC]
+  do
+    if [ -w "$F" ]
+    then
+      TIT=`/util/mp3flac.title "$F"`
+      NUM=`/util/mp3flac.num "$F"`
+      EXT=`/util/mp3flac.ext "$F"`
+
+#      TIT="${TIT%.*}"	#quita extension
+#      NUM="${F%%-*}"	#borra la coincidencia más larga del patrón "-*" desde el final
+      case $EXT in
+        mp3|ogg )
+            echo id3v2 --artist \"${ARTISTA}\" --track \"${NUM}\" --song \"${TIT}\" --album \"${DISCO}\" $ANIO  \  \"${F}\"
+            id3v2 --artist "${ARTISTA}" --track "${NUM}" --song "${TIT}" --album "${DISCO}" $ANIO  "${F}"
+            ;;
+        flac )
+            echo metaflac --remove-tag="ARTIST" --set-tag="ARTIST=${ARTISTA}" --remove-tag="ALBUM" --set-tag="ALBUM=${DISCO}" --remove-tag="DATE" --set-tag="DATE=${ANI}" --remove-tag TRACKNUMBER --set-tag="TRACKNUMBER=${NUM}" --remove-tag TITLE --set-tag="TITLE=${TIT}" "${F}"
+            metaflac --remove-tag="ARTIST" --set-tag="ARTIST=${ARTISTA}" --remove-tag="ALBUM" --set-tag="ALBUM=${DISCO}" --remove-tag="DATE" --set-tag="DATE=${ANI}" --remove-tag TRACKNUMBER --set-tag="TRACKNUMBER=${NUM}" --remove-tag TITLE --set-tag="TITLE=${TIT}" "${F}"
+	   ;;
+	* )
+	 print "EXTENSIÓN INCORRECTA, FICHERO=$F"
+      esac
+    fi
+  done
+fi

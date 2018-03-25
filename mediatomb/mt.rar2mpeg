@@ -1,0 +1,7 @@
+#!/bin/sh
+
+INPUT="$1"
+OUTPUT="$2"
+
+exec /usr/bin/unrar p -inul "$INPUT" | \
+/usr/bin/vlc -I dummy - --sout="#transcode{venc=ffmpeg,vcodec=mp2v,vb=4096,fps=25}:standard{access=file,mux=ps,dst=$OUTPUT}vlc:quit" >/dev/null 2>&1

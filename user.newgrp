@@ -1,0 +1,2 @@
+echo "Cambiar de grupo"
+newgrp $*

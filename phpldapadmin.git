@@ -1,0 +1,3 @@
+#!/bin/bash
+cd /usr/src
+git clone git://phpldapadmin.git.sourceforge.net/gitroot/phpldapadmin/phpldapadmin

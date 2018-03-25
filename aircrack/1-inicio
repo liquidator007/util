@@ -1,0 +1,60 @@
+#!/bin/bash
+
+IF=$1
+
+trap "echo Trap!; parar_monitor $IF" SIGINT SIGTERM
+
+
+if [ $# -lt 1 -o $# -gt 3  ]
+then
+  printf "\nUso: $0 driver fich_salida [canal]\n\n"
+  printf "driver: ath0, ra0...\n\n"
+  exit 1
+fi
+
+tmpfich=/tmp/wifi-scripts
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+parar_monitor()
+{
+  echo "parando monitor.."
+  ejecutar "ifconfig $1 down"
+  ejecutar "iwconfig $1 mode Managed"
+  ejecutar "ifconfig $1 up"
+  echo "monitor parado.."
+}
+
+activar_monitor()
+{
+  echo "activando monitor.."
+  ejecutar "ifconfig $1 down"
+  ejecutar "macchanger --mac=$2 $1"
+  ejecutar "iwconfig $1 mode Monitor"
+  ejecutar "ifconfig $1 up"
+  echo "monitor activado.."
+}
+
+if [ ! -z $3 ]
+then
+  CANAL="--channel $3"
+fi
+
+if [ ! -z $2 ]
+then
+  FICHERO="--write $2"
+fi
+
+export FAKE=00:1a:02:1f:45:3a
+echo FAKE=$FAKE >$tmpfich
+echo IF=$IF >>$tmpfich
+
+parar_monitor $IF
+sleep 2
+activar_monitor $IF $FAKE
+
+ejecutar "airodump-ng $FICHERO $CANAL  $IF"

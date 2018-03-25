@@ -1,0 +1,56 @@
+if [ $# -eq 0 ]
+then
+  APP=`basename $0`
+  printf "Uso:\n\t$APP versión-kernel-a-salvar\n\n">&2
+  exit 1
+fi
+
+KERNELDIR=/usr/src/linux-$1
+
+if [ ! -d $KERNELDIR ]
+then
+  printf "$KERNELDIR No Existe o No Es un Directorio\n\n">&2
+  exit 1
+fi
+
+CONFIG=kernel\-$1\-`date +"%d-%m-%y"`.config
+printf "Salvando configuración en \"$CONFIG\" (.config)...\n"
+cp $KERNELDIR/.config $CONFIG
+ACTUAL=`pwd`
+
+printf "Limpiando ficheros innecesarios que no se han de archivar...\n"
+
+find $KERNELDIR \( -name '*.orig' -o -name '*.o' \) -exec rm {} \;
+
+#determinar el compresor a usar
+printf "Determinando el mejor compresor disponible..."
+bzip2 2>/dev/null
+if [ $? -eq 0 ]
+then
+  printf "bzip2\n"
+  COMP=bzip2
+  EXT=bz2
+else
+  printf "gzip\n"
+  COMP=gzip
+  EXT=tgz
+fi
+
+DIR=$PWD
+OUT=${DIR}/kernel-$1.$EXT
+
+cd /usr/src/linux
+printf "Llamando a Mr. Proper (ahora se llama Don Limpio)...\n"
+make mrproper >/dev/null 2>&1
+
+printf "Enviando la salida al fichero $OUT...\n"
+cd /usr/src
+printf "Ejecutando: tar cf - linux-$1 | $COMP -f > $OUT\n"
+tar cf - linux-$1 | $COMP -f > $OUT
+
+printf "Recuperando configuración $CONFIG a .config...\n"
+cd $ACTUAL
+cp $CONFIG $KERNELDIR/.config 
+
+cd $DIR
+printf "Ok!\n\n"

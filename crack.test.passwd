@@ -1,0 +1,10 @@
+CRACK_DIR=/usr/local/crack/c*
+
+cd $CRACK_DIR
+pwunconv
+cp /etc/passwd passwd.txt
+pwconv
+
+Crack passwd.txt
+
+echo "Ejecutar $CRACK_DIR/Reporter para ver la evolución del proceso"

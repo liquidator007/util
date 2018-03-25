@@ -1,0 +1,13 @@
+http://www.aircrack-ng.org/doku.php?id=mac80211
+
+#
+Download iw.
+#
+Extract the iw tarball.
+#
+Run “make” in the iw directory. If you get lots of “undefined” errors or “netlink/genl/genl.h: No such file of directory”, then you need to install libnl-devel, or update libnl. This can be risky, you might also need to update networkmanager, wpa_supplicant, hostapd and wlassistant, as older versions of them only work with 1.0-pre6 and earlier!
+#
+Run “make install” to install the resulting binary.
+#
+Test iw by executing “iw dev <name of your interface> info”. It is normal if it gives no output, however it shouldn't give any errors
+

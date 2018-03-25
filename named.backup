@@ -1,0 +1,2 @@
+#!/bin/sh
+tar zcvf named-backup.tgz /etc/named.conf /etc/rndc* /var/named /var/run/named

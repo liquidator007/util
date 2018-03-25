@@ -1,0 +1,20 @@
+#!/bin/bash
+
+. /util/vdr.env
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso:\n\t $0 ruta ...\n\nborrará en $D\n\n"
+  exit 1
+fi
+
+echo borrar $* en las carpetas $D...
+
+for DIR in $D
+do
+  for RUTA in $*
+  do
+    echo borrando $DIR/$RUTA...
+    rm -rf $DIR/$RUTA
+  done
+done

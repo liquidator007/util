@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#mp3flac.cue.cut
+#Este script corta un cue y lo recomprime a flac
+#si esta en wavpack (wv) descomprimirlo con wvunpack
+#si esta en ape (monkey's audio) descomprimirlo con shntool conv -o flac *.ape
+
+if [ $# -ne 2 -o ! -r "$1" -o ! -r "$2" ]
+then
+  printf "Uso:\n\t $0 fich-cue fich-audio\n\n"
+  exit 1
+fi
+
+FICH="$2"
+F_AUDIO="${FICH%.*}"
+E_AUDIO="${FICH##*.}"
+
+echo "Procesando $F_AUDIO.$E_AUDIO..."
+
+if [ "$E_AUDIO" == "ape" ]
+then
+  echo detectado Monkeys audio .ape ...
+  shntool conv -o wav "$FICH"
+fi
+if [ "$E_AUDIO" == "wv" ]
+then
+  echo detectado WavPack .wv ...
+  wvunpack "$FICH"
+fi
+
+shnsplit -D -t '%n-%t' -o flac -f "$1" "${F_AUDIO}.wav"

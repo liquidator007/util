@@ -1,0 +1,5 @@
+sudo apt-get clean
+cd /var/lib/apt
+sudo mv lists /tmp/lists.`date '+%F-%T'`.old
+sudo mkdir -p lists/partial
+sudo apt-get clean

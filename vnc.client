@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ $# -ne 1 ]
+then
+  N=`basename $0`
+  printf "\n\nUso:\n\t$N maquina:consola\n\n"
+  exit 1
+fi
+
+#vncviewer -fullscreen -viewonly -shared $1
+vncviewer -viewonly -shared $1

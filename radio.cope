@@ -1,0 +1,3 @@
+#!/bin/sh
+xine http://www.cope.es/directo/directo.asx
+#mplayer http://www.cope.es/directo/directo.asx

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+COMANDO=`basename $0`
+if [ $# -ne 2 ]
+then 
+  printf "\n\nError:\n\nUso:\t$COMANDO <velocidad> <fichero-cue>\n\n"
+  printf "Ejemplo:\t$COMANDO 12 test.cue\n\n"
+  exit 1
+fi
+
+DIR=`pwd`
+NDIR=`dirname $2`
+CUE=`basename $2`
+
+cd $NDIR
+cdrdao write --speed $1 --eject --simulate --overburn --device 0,0,0 $CUE
+
+cd $DIR

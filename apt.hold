@@ -1,0 +1,9 @@
+#!/bin/bash
+
+#sudo aptitude hold $*
+
+for P in $*
+do
+  echo "$P hold" | sudo dpkg --set-selections
+  sudo dpkg --get-selections | grep $P
+done

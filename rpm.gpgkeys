@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rpm --import http://freshrpms.net/packages/RPM-GPG-KEY.txt

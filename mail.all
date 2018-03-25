@@ -1,0 +1,1 @@
+mail `cat /etc/passwd | cut -f1 -d':'`

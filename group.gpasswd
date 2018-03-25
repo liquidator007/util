@@ -1,0 +1,2 @@
+echo "Administra el fichero /etc/group"
+gpasswd $*

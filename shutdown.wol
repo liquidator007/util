@@ -1,0 +1,50 @@
+#!/bin/sh
+#Author: Stuart
+#Original Author:AppleGrew
+#License:GPL version 3
+#Forking to daemonize...
+if [ "$2" != "forked" ]
+then
+ echo "Forking $0..."
+ "$0" "$1" forked &
+ echo "Forked."
+ exit 0
+fi
+#Creating pid file
+ppid=$$
+echo $ppid > "$1"
+echo "Started"
+interface=`route -n | grep "^0.0.0.0" | awk -F " " '{print $8}'`
+echo Interface: $interface
+
+mac=`ifconfig "$interface"|head -n1|sed  -e 's/.*HWaddr \([0-9:a-fA-F]*\)/\1/g' -e 's/://g'`
+pckt_expect=`echo "$mac $mac $mac $mac $mac $mac $mac $mac $mac $mac $mac $mac $mac $mac $mac $mac"|sed 's/ //g'|tr 'A-Z' 'a-z'`
+while `true`
+do
+ pckt_data=`tcpdump -v -i "$interface" -s 0 -x -c 1 \( \(ether dst "$mac" and not ip and not arp and not rarp\) or \(udp port 9\) \)`
+ if [ $? != 0 ]
+ then
+ echo "tcpdump returned error."
+ exit 1
+ fi
+ pckt_data=`echo "$pckt_data" | \
+ grep '0x[0-9]*:'| \
+ tr 'A-Z' 'a-z'| \
+ sed 's/[ \t]//g'| \
+ sed 's/0x[0-9]*:\([0-9a-f]*\)/\1/g'| \
+ tr -d '\n\r' | \
+ awk -F "ffffffffffff" '{print $2}'`
+
+ echo data=$pckt_data expect=$pckt_expect
+
+ if [ "$pckt_data" == "$pckt_expect" ]
+ then
+ echo "Matched! Received Magic packet shutting down..."
+ rm -f $1
+ /sbin/poweroff
+ exit 0
+ fi
+done
+echo "EXITED"
+exit 0
+

@@ -1,0 +1,3 @@
+n=`ps -ef | wc -l`
+n=`expr $n - 1`
+echo $n

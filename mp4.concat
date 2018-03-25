@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\nUso:\n\t$0 dest f1 f2...\n\n"
+  exit 1
+fi
+
+DEST="$1"
+
+shift
+
+FILES=""
+for F in $*
+do
+  avconv -ss 0 -i "$F" -vcodec libx264 -acodec aac -bsf:v h264_mp4toannexb -f mpegts -strict experimental -y "$F.ts"
+  FILES="$FILES$F.ts|"
+done
+
+echo $FILES
+exit
+
+OUTPUT=$(echo "$FILES" | sed -e 's/|$//g')
+
+avconv -i concat:"$OUTPUT" -c copy -bsf:a aac_adtstoasc -y "$DEST"

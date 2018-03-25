@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\nUso:\n\t$0 nombre_proceso ...\n\n"
+  exit 1
+fi
+
+for P in $*
+do
+  ps ax | grep $P | grep -v grep
+done

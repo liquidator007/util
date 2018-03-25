@@ -1,0 +1,3 @@
+#!/bin/bash
+
+grep "deb http://ppa.launchpad.net/wii.sceners.linux/wiithon-1.1/ubuntu karmic main" /etc/apt/sources.list || echo deb http://ppa.launchpad.net/wii.sceners.linux/wiithon-1.1/ubuntu karmic main | sudo tee -a /etc/apt/sources.list && sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1F882273 && sudo apt-get update && sudo apt-get install wiithon && sudo gpasswd -a $USER disk

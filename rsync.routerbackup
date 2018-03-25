@@ -1,0 +1,12 @@
+#!/bin/bash
+apt-get --yes clean
+apt-get --yes autoclean
+mkdir /mnt/tmp
+mount -t auto /dev/sdb1 /mnt/tmp
+rsync -avrpogHDIt / /mnt/tmp/ \
+      --exclude=/tmp --exclude=/proc --exclude=/sys --exclude=/mnt \
+      --exclude=/dev/.static \
+      --delete --links
+mkdir -p /mnt/tmp/proc /mnt/tmp/sys /mnt/tmp/mnt
+umount /dev/sdb1
+rmdir /mnt/tmp

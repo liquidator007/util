@@ -1,0 +1,2 @@
+echo "Cambiar shell por omisión"
+chsh $*

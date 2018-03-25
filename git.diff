@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ $# -ne 2 ]
+then
+  printf "\n\nUso:\n\t$0 commit-ID1 commit-ID2\n\n"
+  exit 1
+fi
+
+git diff $1 $2

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "Uso:\n\t$0 IP...\n\n"
+  exit 1
+fi
+
+while true
+do
+  for IP in $*
+  do
+    DATE=`date`
+    ( ( ping -c 1 $IP >/dev/null)  ; if [ $? -ne 0 ]; then logger "pingtest error $DATE: $IP" ; fi ) &
+  done
+  sleep 1
+done

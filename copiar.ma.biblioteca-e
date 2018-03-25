@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# --list-only para mostrar solo la lista global de ficheros
+# --size-only para ignorar ficheros con igual tamaño 
+# --dry-run (-n) no aplicar los cambios
+
+ rsync -av --delete-after /media/BIBLIO_MA/backup\ de\ WWW/var/biblioteca-e/ /var/www/iescierva.net/intranet/biblioteca-e

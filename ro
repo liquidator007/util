@@ -1,0 +1,1 @@
+sudo mount -o ro,remount /media/MEDIA1_DATA

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+if [ "${1}x" == "onx" ]
+then
+  modprobe ipip > /dev/null 2>&1
+  ip tunnel add plumier-doc mode ipip remote 10.33.70.100 local 172.20.254.100 ttl 255
+  ip link set plumier-doc up
+  ip addr add 10.33.70.175/24 dev plumier-doc
+#  ip route add 10.33.70.0/24 dev plumier-doc
+  printf "\nTuneles:\n"
+  ip tunnel show
+  printf "\nRutas:\n"
+  ip route show
+elif [ "${1}x" == "offx" ]
+then
+#  ip route del 10.33.70.0/24 dev plumier-doc
+  ip addr del 10.33.70.175/24 dev plumier-doc
+  ip link set plumier-doc down 
+  ip tunnel del plumier-doc
+  printf "\nTuneles:\n"
+  ip tunnel show
+  printf "\nRutas:\n"
+  ip route show
+else
+  printf "\n\nUso:\n\t$0 { on | off }\n\n"
+  exit 1
+fi

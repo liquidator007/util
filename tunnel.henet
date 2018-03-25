@@ -1,0 +1,6 @@
+modprobe ipv6
+ip tunnel add he-ipv6 mode sit remote 216.66.80.26 local 178.156.57.2 ttl 255
+ip link set he-ipv6 up
+ip addr add 2001:470:1f08:a86::2 dev he-ipv6
+ip route add ::/0 dev he-ipv6
+ip -f inet6 addr

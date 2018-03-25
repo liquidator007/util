@@ -1,0 +1,8 @@
+/sbin/mke2fs /dev/fd0
+[ -d /mnt/fd ] || mkdir /mnt/fd
+mount /dev/fd0 /mnt/fd
+cp /boot/boot.b /mnt/fd
+cp /vmlinuz /mnt/fd
+echo image=/mnt/fd/vmlinuz label=linux |
+  /sbin/lilo -C - -b /dev/fd0 -i /mnt/fd/boot.b -c -m /mnt/fd/map
+umount /mnt/fd

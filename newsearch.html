@@ -1,0 +1,304 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html>
+<head>
+  <link rel="stylesheet" href="index.css" type="text/css">
+  <title>Motor de b&uacute;squeda Alkaline</title>
+</head>
+<body bgcolor="white">
+	
+<table style="width: 100%;" cellpadding="5">
+  <tbody>
+    <tr>
+      <td align="left" bgcolor="#ffcc66"> 	 <font size="1"><b>Buscar
+las siguientes palabras</b></font><br>
+		 	 	
+      <form action="search.html" method="post">		  		 	 	 <input
+ type="text" name="search" size="20"> 	 <input type="submit"
+ value="Buscar"> 	 <font size="1">mostrar:
+        <select name="quant">
+<!--SEARCH-GENERAL
+              <option £post.quant|[IS10]~[selected] value="10">10</option>
+              <option £post.quant|[IS20]~[selected] value="20">20</option>
+              <option £post.quant|[IS30]~[selected] value="30">30</option>
+              <option £post.quant|[IS40]~[selected] value="40">40</option>
+              <option £post.quant|[IS50]~[selected] value="50">50</option>
+              <option £post.quant|[IS100]~[selected] value="100">100</option>
+              <option £post.quant|[IS-1]~[selected] value="-1">Todos</option>
+	      -->
+        </select>
+resultados</font> 	</form>
+      </td>
+	 </tr>
+    <tr>
+      <td align="left" bgcolor="#ffcc66"> 	 <font size="1"> 	 <br>
+	<!--SEARCH-GENERAL
+
+	    <input type="checkbox" name="other" value="opt:and" 
+	     £post.other|[HASopt:and]~[checked]
+             £post.search|[HASopt:and]~[checked]> coincidir todos</input>
+
+	    <input type="checkbox" name="other" value="opt:case"
+	     £post.other|[HASopt:case]~[checked]
+	     £post.search|[HASopt:case]~[checked]> diferenciar mayúsculas/minúsculas</input>		  
+
+	    <br>
+	    <input type="checkbox" name="other" value="opt:whole"
+	     £post.other|[HASopt:whole]~[checked]
+	     £post.search|[HASopt:whole]~[checked]> palabras completas</input>
+
+	    <input type="checkbox" name="hidesum" value="on" 
+	     £post.hidesum~[checked]> ocultar sumarios</input>
+	    -->
+	 </font>	 </td>
+    </tr>
+    <tr>
+	<td bgcolor="#ffcc66" align="right"> 	 <font size="1"> 	<!--SEARCH-GENERAL <b>Alkaline</b> ha encontrado  $total página(s) en $time segundos
+	    £total|[NOT0]~[
+	  <br>		  
+	    Resultados de la búsqueda:
+	    [<a href="$sort.£post.hidesum~[+hidesum=$post.hidesum]+quant$post.quant">relevancia</a>]
+	    [<a href="$sort.idate£post.hidesum~[+hidesum=$post.hidesum]+quant$post.quant">fecha</a>]
+	    [<a href="$sort.title£post.hidesum~[+hidesum=$post.hidesum]+quant$post.quant">título</a>]
+	    [<a href="$sort.size£post.hidesum~[+hidesum=$post.hidesum]+quant$post.quant">tamaño</a>]
+	    [<a href="$sort.url£post.hidesum~[+hidesum=$post.hidesum]+quant$post.quant">url</a>]<br>
+	    ]
+	    -->
+		 	<!--SEARCH-NEXT--> <br>
+	 </font> 	</td>
+    </tr>
+    <tr>
+	<td style="background-color: white;" colspan="2"><br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<hr noshade="noshade"><br>
+<table style="width: 100%;" cellpadding="5">
+  <tbody>
+    <tr>
+      <td style="background-color: white;" colspan="2"><br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<br>
+<br>
+<br>
+<table align="center">
+  <tbody>
+    <tr>
+	<td colspan="2" align="center"> 	 <font size="1"><br>
+Alkaline Search Engine 	    &copy; <a target="_new"
+ href="http://www.vestris.com">Vestris Inc</a>.<br>
+1994-2002 - 	    Switzerland - All Rights Reserved<br>
+	 </font> 	</td>
+    </tr>
+  </tbody>
+</table>
+	    	    	 <br>
+<br>
+<table style="width: 100%;" cellpadding="5">
+  <tbody>
+    <tr>
+      <td style="background-color: white;" colspan="2"> 	 <big><big><big>Ejemplos
+de b&uacute;squeda:</big></big></big><br>
+      <table cellpadding="2" cellspacing="2" border="1"
+ style="text-align: left; width: 100%;">
+        <tbody>
+          <tr>
+            <td style="vertical-align: top; font-weight: bold;"
+ width="15%">Si buscas<br>
+            </td>
+            <td style="vertical-align: top; font-weight: bold;">Obtendr&aacute;s<br>
+            </td>
+          </tr>
+          <tr>
+            <td style="vertical-align: top;" width="15%"><span
+ style="font-style: italic; font-weight: bold;">red dato</span><br>
+            </td>
+            <td style="vertical-align: top;">Documentos que
+contienen&nbsp; las palabras <span style="font-style: italic;">"red"</span>
+e <span style="font-style: italic;">"dato"</span> (incluso como parte de
+otras palabras, o con may&uacute;sculas). Se mostrar&aacute;n promero
+los documentos que contienen ambas palabras.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-weight: bold; font-style: italic;"
+ width="15%">Red dato<br>
+            </td>
+            <td style="vertical-align: top;">Similar al anterior, pero
+el documento se seleccionar&aacute; si la <span
+ style="font-style: italic;">"R"</span> aparece en may&uacute;scula.<br>
+            </td>
+          </tr>
+          <tr>
+            <td style="vertical-align: top;" width="15%"><span
+ style="font-weight: bold; font-style: italic;">"Red"</span><br>
+            </td>
+            <td style="vertical-align: top;">Palabra completa. No se
+seleccionar&iacute;a <span style="font-style: italic;">"Redes"</span><br>
+            </td>
+          </tr>
+          <tr>
+            <td style="vertical-align: top;" width="15%"><span
+ style="font-style: italic; font-weight: bold;">+red dato</span><br>
+            </td>
+            <td style="vertical-align: top;"><span
+ style="font-style: italic;">"red"</span> debe aparecer
+obligatoriamente, mientras que <span style="font-style: italic;">"dato"</span>
+puede aparecer o no.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-weight: bold; font-style: italic;"
+ width="15%">+red -dato<br>
+            </td>
+            <td style="vertical-align: top;"><span
+ style="font-style: italic;">"red"</span> es obligatorio, mientras que
+no debe aparecer <span style="font-style: italic;">"dato"</span>.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-weight: bold; font-style: italic;"
+ width="15%">author:martin red<br>
+            </td>
+            <td style="vertical-align: top;">Metab&uacute;squeda (si es
+aplicable). El autor debe ser <span style="font-style: italic;">Martin</span>
+(o <span style="font-style: italic;">Martinez</span>...), y el
+documento puede o no contener <span style="font-style: italic;">"red"</span><br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-weight: bold; font-style: italic;">author:+"Martin"<br>
+            </td>
+            <td style="vertical-align: top;">Documentos del autor <span
+ style="font-style: italic;">"Martin"</span><br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-weight: bold; font-style: italic;">author:"john
+doe"<br>
+            </td>
+            <td style="vertical-align: top;">Similar a <span
+ style="font-style: italic;">author:john author:doe</span><br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">precio&gt;1000<br>
+precio=1000<br>
+precio&lt;1000<br>
+            </td>
+            <td style="vertical-align: top;">Si en el documento aparece
+la cadena <span style="font-style: italic;">"Precio=valor numerico"</span>
+es posible buscar considerando dicho valor num&eacute;rico.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">*<br>
+            </td>
+            <td style="vertical-align: top;">Lista de todos los
+documentos indexados<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">host:.terra.es<br>
+            </td>
+            <td style="vertical-align: top;">Documentos indexados que
+pertenezcan al dominio indicado.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">host:.com
+path:docs/pdfs<br>
+            </td>
+            <td style="vertical-align: top;">Documentos del dominio <span
+ style="font-style: italic;">".com"</span> que se alojan en un servidor
+cualquiera de ese dominio, en la ruta <span style="font-style: italic;">"docs/pdfs"</span><br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">url:servidor/ruta<br>
+            </td>
+            <td style="vertical-align: top;">Combina las posibilidades
+de las opciones anteriores.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">before:fecha<br>
+            </td>
+            <td style="vertical-align: top;">Documentos anteriores a
+una fecha dada. La fecha puede estar dada como DDMMAA, DD.MM.AA,
+DD-MM-AA, DD/MM/AA, DD/MM/AAAA. Por ejemplo, "before:22/03/2003"<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">after:fecha<br>
+            </td>
+            <td style="vertical-align: top;">Documentos posteriores a
+una fecha dada.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">opt:case<br>
+            </td>
+            <td style="vertical-align: top;">Forzar b&uacute;squeda
+sensible a may&uacute;sculas<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">opt:insens<br>
+            </td>
+            <td style="vertical-align: top;">Busqueda no sensible a
+may&uacute;sculas.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">opt:whole<br>
+            </td>
+            <td style="vertical-align: top;">Buscar palabras completas.<br>
+            </td>
+          </tr>
+          <tr>
+            <td
+ style="vertical-align: top; font-style: italic; font-weight: bold;">opt:whole,case<br>
+            </td>
+            <td style="vertical-align: top;">Combinaci&oacute;n de
+opciones.<br>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br>
+      <hr> 	<!--SEARCH-GENERAL $query~[Buscando <b>]#[</b>.]^[Nada que buscar.]<br>-->
+	<!--SEARCH-RESULTS--> 	</td>
+    </tr>
+  </tbody>
+</table>
+<br>
+<!--SET MAP--
+   <dl><dt> 
+   <a href="$url" target="_new"><b>$hltitle</b></a> $quality%
+   <dd>   
+   <font size="1">$hlheader ... <br><font color="gray">$size bytes; modified: $modif</font>
+   <br>url: <a href="$url" target="_new">$url</a>    
+   </font>
+  ]
+  </dl>--><!--SET SEARCH-NORESULTS--Lo siento, no hay resultados.<br>Quizá le interese leer consejos de búsqueda en <a target="_new" href="http://www.vestris.com/alkaline/tips.html">Aquí</a>.<br><font size="1">Recuerde que está realizando una búsqueda en un índice local, y no en todo Internet.</font><hr noshade>--><!--SET PREV--<img src="prev.gif" width=50 height=15 border=0 align="absbottom">--><!--SET NEXT--<img src="next.gif" width=50 height=15 border=0 align="absbottom">--><!--SET C-BEFORE--<b><font color="red">--><!--SET C-AFTER--</b></font>--><!--SET N-BEFORE--<b>--><!--SET N-AFTER--</b>--><!--SET RECENT-COUNT--3--><!--SET NEXT-INHERIT--£post.hidesum~[+hidesum=$post.hidesum]--><!--SET HIGHLIGHT-OPEN--<font color="red">--><!--SET HIGHLIGHT-CLOSE--</font>-->
+</body>
+</html>

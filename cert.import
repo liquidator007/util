@@ -1,0 +1,1 @@
+keytool -alias $1 -importcert -file $1.crt

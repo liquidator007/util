@@ -1,0 +1,39 @@
+#!/bin/bash
+
+if [ $# -lt 1 -o $# -gt 3 ]
+then
+  printf "\n\nUso:\n\t$0 origen [destino [niveles] ]\n\n"
+  exit 1
+fi
+
+if [ $# -eq 1 ]
+then
+  DST=/media/disk
+  let N=0
+fi
+if [ $# -eq 2 ]
+then
+  DST="$2"
+  let N=0
+else
+  DST="$2"
+  let N=3
+fi
+
+SRC="$1"
+
+if [ ! -d "$SRC" -o ! -d "$DST" ]
+then
+  echo "un argumento no es un directorio"
+  exit 1 
+fi
+
+while [ $N -gt 0 ]
+do
+  $DST="${DST}/.."
+  let N=$N\-1
+done
+
+echo Copiando desde $SRC a $DST [N=$N]...
+
+find "$SRC" -name '*.mp3' -exec cp -pr {} "$DST" \;

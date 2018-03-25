@@ -1,0 +1,12 @@
+NTPSERVS="localhost ntp.iescierva.net ntp2.iescierva.net"
+
+for NTP in $NTPSERVS
+do
+echo $NTP
+ntpq -c rv $NTP
+ntpq -p $NTP
+ntptrace $NTP
+echo
+echo
+echo
+done

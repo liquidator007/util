@@ -1,0 +1,68 @@
+#!/bin/bash
+
+trap "echo Interrumpido!; exit 1" SIGINT SIGTERM SIGKILL
+
+PATH=/usr/local/bin:/usr/bin:$PATH
+
+DEFAULT_SAMPLERATE=44100
+DEFAULT_CHANNELS=2
+
+USO="
+Transcodificacion de audio a WAV mediante avconv
+ 
+Sinopsis:
+ $0 opcion...
+ 
+Generic Options:
+ -h, --help                 Mostrar mensaje de ayuda
+ -i, --input                Fichero de entrada a transcodificar
+ -o, --output               Fichero de salida transcodificado (WAV)
+ -a, --audio-samplerate     Samplerate de audio (en kbps) (default=$DEFAULT_SAMPLERATE)
+ -c, --channels		    Nº de canales de codificación (default=$DEFAULT_CHANNELS)
+"
+
+if [ $# -lt 2 ]
+then
+  echo "$USO"
+  exit 1 
+fi
+
+LOG=/tmp/mt.transcode.audio.ffmpeg.log
+
+while [ "$#" -gt "0" ]
+do
+    case "$1" in
+        -i|--input)
+            INPUT="$2"
+            shift; shift;
+            ;;
+        -o|--output)
+            OUTPUT="$2"
+            shift; shift;
+            ;;
+        -a|--audio-samplerate)
+            SAMPLERATE=$2
+            shift; shift;
+            ;;
+        -c|--channels)
+            CHANNELS="$2"
+            shift; shift;
+            ;;
+        -h|--help|*)
+            echo "$USO"
+            echo ERROR: $1
+            exit 1
+            ;;
+    esac
+done
+
+#Valores por defecto
+[ "$SAMPLERATE" ] || SAMPLERATE=$DEFAULT_SAMPLERATE
+[ "$CHANNELS" ] || CHANNELS=$DEFAULT_CHANNELS
+
+SAMPLERATE="-ab $SAMPLERATE"
+CHANNELS="-channels $CHANNELS"
+
+echo avconv -y -i "${INPUT}" ${SAMPLERATE} -acodec pcm_s16le "${OUTPUT}.wav" >$LOG 2>&1
+avconv -y -i "${INPUT}" ${SAMPLERATE} -acodec pcm_s16le "${OUTPUT}.wav" >>$LOG 2>&1
+mv ${OUTPUT}.wav ${OUTPUT}

@@ -1,0 +1,29 @@
+if [ $# -ne 3 ]
+then
+  printf "\nUso:\n\n\t$0 <dia> <mes> <hora>\n\nEjemplo:\n\t:$0 2 Apr '16:..:..' \n\n"
+  printf "Nota: busca en los logs mensajes DHCPREQUEST\n\n" 
+  exit 1
+fi
+
+OTROS_SERVIDORES_DHCP="172.20.254.235"
+DIR_TMP=/tmp/pc.activos
+
+M=$2
+D=$1
+H=$3
+
+ejecutar()
+{
+#  printf "Ejecutando: $*...\n\n"
+  sh -c "$*"
+}
+
+rm -rf $DIR_TMP
+mkdir -p $DIR_TMP
+
+#ejemplo de comando a ejecutar:
+
+C="cat /var/log/syslog /var/log/syslog.? | grep \"^${M} ${D}.*${H}.*dhcpd.*DHCPREQUEST\" | cut -f8 -d' ' | sed 's/from.*//' | sed 's/ .*//' | sort | uniq"
+#C="grep -E  \"^${M}[ ]+${D}.*${H}.*dhcpd.*DHCPREQUEST\" | cut -f8 -d' ' | sed 's/from.*//' | sed 's/ .*//' | sort | uniq"
+
+ejecutar $C

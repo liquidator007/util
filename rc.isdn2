@@ -1,0 +1,44 @@
+#!/bin/sh
+
+#Script de conexion ISDN 2 canales
+
+LOCAL_NUMBER="968330094"
+REMOTE_NUMBER="968557000"
+
+LOCAL_IP="195.76.154.169"	#IP falsa. Se establecerá luego
+
+DEVICE="ippp0"
+DEVICE1="ippp128"
+USER="IESBOHIO@teleline1"
+
+echo Inicializando ippp0...
+isdnctrl addif $DEVICE			#Crea el interfaz ippp
+isdnctrl addphone $DEVICE out $REMOTE_NUMBER	#Numero al que llamar
+isdnctrl eaz $DEVICE $LOCAL_NUMBER	#EAZ: El número de la RDSI
+isdnctrl l2_prot $DEVICE hdlc		#para ppp sincrono
+isdnctrl l3_prot $DEVICE trans		#
+isdnctrl encap $DEVICE syncppp		# encapsulacion IP en PPP
+isdnctrl huptimeout $DEVICE 300000	# desconectar en x segundos inact.
+isdnctrl chargehup $DEVICE off		# colgar antes de siguiente paso
+isdnctrl secure $DEVICE on		# Aceptar llamadas de num.autorizados
+
+isdnctrl addslave $DEVICE $DEVICE1	# Crear interfaz esclavo
+isdnctrl addphone $DEVICE1 out $REMOTE_NUMBER 
+isdnctrl eaz $DEVICE1 $LOCAL_NUMBER	#EAZ: El número de la RDSI
+isdnctrl l2_prot $DEVICE1 hdlc		#para ppp sincrono
+isdnctrl l3_prot $DEVICE1 trans		#
+isdnctrl encap $DEVICE1 syncppp		# encapsulacion IP en PPP
+isdnctrl huptimeout $DEVICE1 300000	# desconectar en x segundos inact.
+isdnctrl chargehup $DEVICE1 off		# colgar antes de siguiente paso
+isdnctrl secure $DEVICE1 on		# Aceptar llamadas de num.autorizados
+
+ifconfig $DEVICE $LOCAL_IP
+echo  Añadiendo ruta...
+route add -net 195.76.154.0 netmask 255.255.255.0 dev $DEVICE
+echo  Configurando ruta por omisión...
+route add default $DEVICE
+
+echo  Ejecutando ipppd...
+/bin/ipppd user $USER remotename infovia -d defaultroute noipdefault \
+ipcp-accept-local ipcp-accept-remote mru 1500 mtu 1500 +mp lock -bsdcomp \
+-pc -ac /dev/ippp0 /dev/ippp1 &

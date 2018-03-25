@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\nUso:\n\t$0 carpeta ...\n\n"
+  exit 1
+fi
+
+
+echo "# toxine playlist" 
+
+for CARPETA in $* 
+do
+  find $CARPETA -type f \( -iname '*.avi' -o -iname '*.mpg' -o -iname '*.mpeg' -o -iname '*.divx' -o -iname '*.asf' -o -iname '*.wmv' \) -print0 | \
+	xargs -0 -I '{}' printf "entry {\n\tidentifier = %s;\n\tmrl = %s;\n};\n\n" '{}' '{}' 
+done
+
+echo "# END" 

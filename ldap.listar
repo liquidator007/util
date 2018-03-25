@@ -1,0 +1,3 @@
+cmd="ldapsearch -x -b 'dc=iescierva,dc=net' '(objectclass=*)' namingContexts"
+echo CMD=$cmd
+sh -c "$cmd"

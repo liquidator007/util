@@ -1,0 +1,21 @@
+#!/bin/sh
+
+if [ -f /var/run/ip-up.activo ]
+then
+  PATH=/bin:/usr/local/sbin
+  echo "Ejecutando fetchnews..."
+  fetchnews -v
+  #echo "Eliminando grupos no deseados..."
+  #cd /etc/leafnode
+  #sed -f sedclean <groupinfo >groupinfo.new
+  #touch --reference=groupinfo groupinfo.new
+  #touch /var/spool/news/active.read
+  #ls -l groupinfo*
+  #rm -f groupinfo.old 2>/dev/null
+  #mv groupinfo groupinfo.old
+  #mv groupinfo.new groupinfo
+else
+  echo "Error: el interfaz parece no estar activo"
+  echo "falta fichero /var/run/ip-up.activo"
+  echo "revisar rc.isdn, /etc/ppp/ip-up.local y /etc/ppp/ip-down.local"
+fi

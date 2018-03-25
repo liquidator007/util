@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso:\n\t $0 ruta...\n\nBusca grabaciones vdr en las carpetas y crea un .ts en las mismas\n\n"
+  exit 1
+fi
+
+for DIR in $*
+do
+  find $DIR -type d -name '*.rec' -exec /util/vdr.concat {}  \;
+done

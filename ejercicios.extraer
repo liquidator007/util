@@ -1,0 +1,66 @@
+#!/bin/bash
+
+for I in 1 2 
+do
+for F in *
+do
+  if [ -r "$F" -a -f "$F" ]
+  then
+  echo procesando $F...
+  D=`dirname "$F"`
+  B=`basename "$F"`
+  cd "$D"
+# E=`echo "$B" | awk -F . '{print $NF}'`
+  E="${B##*.}"
+  NE="${B%%.*}"
+  mkdir "${NE}" 2>/dev/null
+  cd "${NE}"
+  case "$E" in
+	gz | gzip) gunzip ../"$B" && rm -f ../"$B"
+	    ;;
+	rar|RAR) unzip -qq ../"$B" && rm -f ../"$B"
+	    ;;
+	zip|ZIP) unrar x -inul ../"$B" && rm -f ../"$B"
+	    ;;
+	tar) tar xf ../"$B" && rm -f ../"$B" 
+            ;;
+	tgz) tar zxf ../"$B" && rm -f ../"$B" 
+            ;;
+	7z|7Z) p7zip -d ../"$B" && rm -f ../"$B"
+	    ;;
+	html|HTML) mv ../"$B" .
+	    ;;
+	xml|XML) mv ../"$B" .
+	    ;;
+	css|CSS) mv ../"$B" .
+	    ;;
+        *)
+  esac
+  cd ..
+  fi
+done  
+done
+
+let N=0
+for D in *
+do
+  if [ -r "$D" -a -d "$D" ]
+  then
+  cd "$D"
+  echo  `pwd`
+  NUM=`ls -1 | wc -l`
+  if [ $NUM -eq 1 ]    #solo hay un contenido
+  then
+    DIR=`ls -1`
+    if [ -d "$DIR" ]
+    then
+      mv "$DIR"/* .
+      rmdir "$DIR"
+    fi
+  fi
+  cd ..
+  let N=$N+1
+  fi
+done
+
+echo Total Directorios = $N

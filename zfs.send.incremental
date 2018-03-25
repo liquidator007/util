@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if [ $# -ne 4 ]
+then
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset\n\n\n"
+  exit 1
+fi
+
+LASTLOCAL=$(sudo zfs list -t snapshot -r "${1}" -H -o name -s creation | tail -1 )
+LASTREMOTE=$(ssh -i $2 $3 "zfs list -t snapshot -r $4 -o name -s creation |tail -1 | cut -f2 -d'@'" )
+PREVLOCAL=$(sudo zfs list -t snapshot -r "${1}" -H -o name -s creation | tail -2 | head -1 )
+
+echo Prev Local Snapshot: $PREVLOCAL
+echo Last Local Snapshot: $LASTLOCAL
+echo Last Remote Snapshot: $LASTREMOTE
+
+LASTLOCAL2=$(echo $LASTLOCAL | cut -f2 -d'@')
+
+if [ "$LASTLOCAL2" == "$LASTREMOTE" ]
+then
+  echo Nothing to do!!!
+  exit 1
+fi
+
+echo zfs send -i "${LASTREMOTE}" "${LASTLOCAL}" \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
+zfs send -i "${LASTREMOTE}" "${LASTLOCAL}" | ssh -i "${2}" "${3}" zfs recv -F "${4}"

@@ -1,0 +1,10 @@
+gawk -v F="$*" '
+function ltrim(s) { sub(/^[ \t\r\n]+/, "", s); return s }
+function rtrim(s) { sub(/[ \t\r\n]+$/, "", s); return s }
+function trim(s) { return rtrim(ltrim(s)); }
+	BEGIN {
+	IGNORECASE=1
+	TIT = trim(gensub(/([0-9]+)[ ._-]+(.+)\.(mp3|ogg|flac|wav)/, "\\2", "g", F))
+	print TIT
+	}
+'

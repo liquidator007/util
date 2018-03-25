@@ -1,0 +1,3 @@
+cd /
+tar zcvf ubuntu-postinstall-ma.tgz /etc/apt/sources.list /home /etc/skel /etc/profile /root /home /util /etc/group /etc/passwd /etc/shadow /etc/gshadow
+cd -

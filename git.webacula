@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd /usr/src
+git clone git://webacula.git.sourceforge.net/gitroot/webacula/webacula

@@ -1,0 +1,1 @@
+/usr/sbin/dhcpd -6 -d -cf /etc/dhcp/dhcpd6.conf eth1 

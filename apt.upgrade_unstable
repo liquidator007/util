@@ -1,0 +1,2 @@
+#!/bin/bash
+apt-get install `apt-show-versions -u -b | grep unstable | cut -d ' ' -f 1`

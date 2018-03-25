@@ -1,0 +1,20 @@
+PATH=$PATH:/util
+
+if [ $# -ne 5 ]
+then
+printf "Uso\n\t$0 <nombre-base> <gid> <uid inicial> <num-inicio> <num-fin>\n\n"
+printf "Ejemplo:\n\t$0 asi1-08- 1004 5000 1 10\n\n"
+exit 1
+fi
+
+let MIUID=$3
+
+echo version: 1
+echo
+
+for A in `serie $4 $5 1`
+do
+	USR=${1}${A}
+	let MIUID=$MIUID+1
+	ldap.usuario $USR $MIUID $2 /home/$USR
+done

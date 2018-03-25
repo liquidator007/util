@@ -1,0 +1,12 @@
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+echo "Iniciando $0" 
+while true
+do
+	ping -c 5 172.20.254.241
+	if [ $? -ne 0 ]
+	then
+		ssh -o batchmode=yes -o authpassword.allowfromcommandline=yes \
+			 --password=Rufete452THX1140 manager@172.20.254.241 uptime
+	fi
+	sleep 60			#espera de 60 segundos
+done

@@ -1,0 +1,12 @@
+if [ $# -eq 0 ]
+then
+  printf "\n\n\tUso: $0 uid...\n\n"
+  exit 1
+fi
+
+for F in $*
+do
+    cmd="ldapsearch −x -ZZ uid=$F"
+    echo CMD=$cmd
+    sh -c "$cmd"
+done

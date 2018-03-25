@@ -1,0 +1,22 @@
+echo Instalando paquetes necesarios...
+apt-get install build-essential subversion make automake bison binutils genext2fs gcc-3.4 texinfo libmpfr-dev patch zlib1g-dev libncurses5-dev gettext language-pack-en locales flex texlive
+
+echo reconfigurando locales...
+dpkg-reconfigure locales
+
+export CC=/usr/bin/gcc-3.4
+
+ln -fs /bin/bash /bin/sh
+
+cd ~
+
+echo haciendo svn checkout...
+svn checkout -q http://svn.assembla.com/svn/VDR-M7x0/unstable ./VDR-NG-EM
+
+echo para compilar todo...
+cd ./VDR-NG-EM
+./make-fw
+
+echo para compilar solo el firmware...
+cd VDR-NG-FW
+make

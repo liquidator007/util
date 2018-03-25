@@ -1,0 +1,263 @@
+#!/bin/sh
+#copia. Muestra todos los ficheros de configuracion importantes.
+#usado para realizar backups
+
+DISP="-zip-lg-fd-general-root-util-www-quota-isapnp-diald-kmod-webmin-"
+DISP=$DISP"apache-cron-dhcp-ftp-inet-irc-lilo-lpd-mail-mount-netscape-"
+DISP=$DISP"named-news-nwe-nfs-ppp-samba-squid-syslog-telnet-wget-x-config-"
+DISP=$DISP"sudo-"
+
+if [ $# -eq 1 -a ${1}x = "-ax" ]
+then
+ TODO=$DISP
+elif [ $# -eq 1 -a ${1}x = "configx" ]
+then
+TODO="-quota-fd-general-apache-cron-dhcp-inet-irc-kmod-ftp-lilo-lpd-mail-mount-"
+TODO=$TODO"named-netscape-news-nwe-nfs-ppp-samba-squid-syslog-telnet-wget-x-"
+TODO=$TODO"isapnp-x-diald-"
+elif [ $# -eq 0 ]
+then
+ printf "Uso:\n$0 { -a | modulo...}\n%s\n\n" $DISP 
+ exit 1
+else
+for A in $*
+do
+if substr -${A}- $DISP 
+then
+TODO=${TODO}-$A
+fi
+done
+TODO=${TODO}-
+fi
+
+#zip
+if substr -zip- $TODO 
+then
+echo /zip 
+fi
+
+#Linux Gazette
+if substr -lg- $TODO 
+then
+echo /Linux-Gazette
+fi
+
+#general
+if substr -general- $TODO
+then
+echo /etc/profile /etc/inittab /etc/syslog.conf /etc/bashrc /etc/rc.d
+echo /etc/hosts.equiv /etc/sysconfig
+echo /etc/printcap /etc/hosts.lpd
+echo /etc/soundconf
+echo /etc/skel
+fi
+
+#root
+if substr -root- $TODO
+then
+echo /root/[a-zA-Z0-9]*
+echo /root/.kde
+fi
+
+#util
+if substr -util- $TODO 
+then
+echo /util
+fi
+
+#www
+if substr -www- $TODO 
+then
+echo /home/www/[a-zA-Z0-9]* 
+fi
+
+#apache
+if substr -apache- $TODO
+then
+echo /etc/httpd/conf 
+fi
+
+#cron
+if substr -cron- $TODO
+then
+echo /etc/crontab /var/spool/cron
+fi
+
+#dhcp
+if substr -dhcp- $TODO 
+then
+echo /etc/dhcpd.conf /etc/dhcpd.leases*
+fi
+
+#diald
+if substr -diald- $TODO 
+then
+echo /etc/rc.d/init.d/diald /usr/lib/ppp /etc/diald.conf
+fi
+
+#fd
+if substr -fd- $TODO 
+then
+echo /usr/local/etc/driveprm
+fi
+
+#ftp
+if substr -ftp- $TODO 
+then
+echo /etc/*ftp* /etc/welcome.msg
+fi
+
+#inet
+if substr -inet- $TODO 
+then
+echo /etc/inetd.conf
+echo /etc/sysconfig/network* /etc/sysconfig/static-routes
+fi
+
+#irc
+if substr -irc- $TODO 
+then
+echo /usr/local/lib/ircd/ircd.conf /usr/local/lib/ircd/ircd.motd
+fi
+
+#isapnp
+if substr -isapnp- $TODO 
+then
+echo /etc/isapnp.conf
+fi
+
+#kmod. sustituye al kerneld
+if substr -kmod- $TODO 
+then
+echo /etc/conf.modules
+fi
+
+#lilo
+if substr -lilo- $TODO
+then
+echo /etc/lilo.conf
+fi
+
+#webmin
+if substr -webmin- $TODO
+then
+echo /etc/webmin/miniserv* `find /etc/rc.d -name '*webmin*' -print`
+fi
+
+#lpd
+
+#lpd
+if substr -lpd- $TODO
+then
+echo /etc/hosts.lpd /etc/printcap
+fi
+
+#mail
+if substr -mail- $TODO 
+then
+echo /etc/sendmail.cf /etc/sendmail.cw /etc/sendmail.mc
+fi
+
+#mount
+if substr -mount- $TODO 
+then
+echo /etc/fstab
+fi
+
+#named (dns)
+if substr -named- $TODO 
+then
+echo /var/named
+echo /etc/named.conf
+#echo /etc/named.boot    #para BIND anterior a vers. 8
+echo /etc/resolv.conf
+fi
+
+#news
+if substr -news- $TODO 
+then
+#echo /etc/news /var/lib/news /var/spool/news /usr/lib/news #antigua conf.
+echo /etc/news/inn.conf /etc/news/nnrp.access /var/lib/news/active
+echo /var/lib/news/newsgroups
+fi
+
+#netscape
+#Los ficheros estan en el dir. ".netscape" para cada usuario
+#  bookmarks.html : Libro de marcadores
+#  *.na2: Libros de direcciones
+#  liprefs.js: Fichero que contiene la lista de libros de dir. activos
+#  preferences.js: Preferencias de listas de direcciones
+
+if substr -netscape- $TODO 
+then
+echo /etc/rc.d/init.d/netscape_config
+echo `find /root \( -name '*.nab' -o -name '*.na2' -o -name '*.js' -o -name signature.txt -o -name bookmarks.html \) -print`
+echo `find /home \( -name '*.nab' -o -name '*.na2' -o -name '*.js' -o -name signature.txt -o -name bookmarks.html \) -print`
+fi
+
+#nwe
+if substr -nwe- $TODO 
+then
+echo /etc/nwserv.*
+fi
+
+#nfs
+if substr -nfs- $TODO 
+then
+echo /etc/hosts.allow /etc/hosts.deny /etc/exports
+fi
+
+#ppp
+if substr -ppp- $TODO 
+then
+echo /etc/ppp #/util/internet /util/ppp-off /root/*.dns /root/*.proveedor
+fi
+
+#quota
+if substr -quota- $TODO 
+then
+echo /etc/fstab /quota.user /quota.group
+fi
+
+#samba
+if substr -samba- $TODO 
+then
+echo /etc/smb.conf
+fi
+
+#syslog
+if substr -syslog- $TODO 
+then
+echo /etc/syslog.conf
+fi
+
+#sudo
+if substr -sudo- $TODO 
+then
+echo /etc/sudoers
+fi
+
+#squid
+if substr -squid- $TODO 
+then
+echo /etc/squid
+#echo /usr/local/squid/etc/squid.conf
+fi
+
+#telnet
+if substr -telnet- $TODO 
+then
+echo /etc/issue /etc/issue.net /etc/securetty
+fi
+
+#wget
+if substr -wget- $TODO
+then
+echo /usr/local/lib/wgetrc /root/.wgetrc `find /home -name .wgetrc -print`
+fi
+
+#x
+if substr -x- $TODO
+then
+echo /etc/X11/XF86Config /root/.xinitrc `find /home \( -name .xinitrc -o -name .Xmodmap \) -print` /etc/X11/xinit/xinitrc /etc/X11/Xmodmap /root/.Xmodmap 
+fi

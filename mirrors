@@ -1,0 +1,72 @@
+#!/bin/bash
+
+PATH=$PATH:/util:/bin:/usr/bin
+
+MIRRORDIR=/var/spool/mirrors
+LOCKDIR=/var/lock/subsys/
+LOCK=$LOCKDIR/mirrors.lock
+
+trap "echo Interrumpido!; rm -f $LOCK; exit 1" SIGINT SIGTERM SIGKILL
+
+if [ -f $LOCK ]
+then
+  echo Existe bloqueo en $LOCK
+  exit 1
+fi
+
+mkdir -p $LOCKDIR $MIRRORDIR
+touch $LOCK 
+
+. /etc/profile
+
+logger "$0: `date`"
+
+mirror()
+{
+	# $1: URL a copiar
+	# $2: nivel de recursion
+	# $3, $4, $5: parametros opcionales
+	# --span-hosts
+	COMANDO="wget --debug --html-extension --mirror --convert-links --recursive --random-wait --wait=0 --no-parent --level=$2 --dont-remove-listing --timestamping --continue --tries=10 --directory-prefix=$MIRRORDIR $3 $4 $5 $1"
+	echo $COMANDO
+	`$COMANDO`
+}
+
+#
+# Mirrors activos
+# PARA FTP MEJOR NO USAR PROXY
+##############################################################################
+cd /var/spool/mirrors
+
+#MIRRORS EN ACTIVO
+mirror ftp://217.219.149.166/eBooks/IT&Computer/ 10 --proxy=off 
+mirror http://www.botijopedia.com/ 10 --proxy=off 
+mirror http://hwagm.elhacker.net/ 10 --proxy=off 
+mirror http://seguridadwireless.net/ 10 --proxy=off 
+mirror http://www.aircrack-ng.org/ 10 --proxy=off 
+mirror http://www.mclibre.org 10 --proxy=off 
+mirror http://www.zytrax.com/books/ 10 --proxy=off 
+mirror http://www.botijopedia.com/ 10 --proxy=off 
+mirror http://www.snpp.com/ 10 --proxy=off  
+
+#MIRRORS ANTIGUOS
+#wget --recursive --level=2 --continue --proxy=off --directory-prefix=/var/spool/mirrors ftp://antivirus.educarm.es/pub/InocuLan/sigs &
+#mirror ftp://antivirus.educarm.es/pub/InocuLan/sigs 2 --proxy=off
+#mirror http://hwagm.elhacker.net 10 --proxy=off
+#mirror http://www.aprendomusica.com 10 --proxy=on
+#mirror http://ie.releases.ubuntu.com/ubuntu-cdimage/releases/dapper/release.1/ubuntu-6.06.1-dvd-i386.iso 1 --proxy=off
+
+#mirror http://www.aire06.com 8 --proxy=on &
+
+#mirror http://www.abacusnt.es/ 10 --proxy=off &
+#wget --recursive --level=3 --continue --proxy=off --directory-prefix=/var/spool/mirrors ftp://antivirus.educarm.es/pub
+
+
+#Fijar permisos
+chown -R root.www-data /var/spool/mirrors
+chmod -R u=rwx,g=rx,o= /var/spool/mirrors
+
+#LIBERAR BLOQUEO
+rm -f $LOCK
+exit
+

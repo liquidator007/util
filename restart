@@ -1,0 +1,33 @@
+#!/bin/sh
+#restart [<servicio>]
+# (c) 1998 Miguel Angel Ibáñez Mompeán
+
+if [ $# -eq 0 ]
+then
+printf "Envia una señal -HUP al servicio que se indique.\n\n"
+printf "Uso:\n\t$0 [<servicio>]\n\n"
+echo "Servicios disponibles:"
+echo "Nombre del Servicio	PID"
+find /var/run -name *.pid -printf "%16.16f\t" -exec head -1 {}  \;
+elif [ $# -eq 1 ]
+then
+F=$1
+fgrep .pid << !
+$F
+!
+if [ $? -ne 0 ]
+then 
+ 	F=${F}.pid
+fi
+F=/var/run/$F
+PID=`head $F`
+if [ $? -ne 0 ]
+then
+	exit
+fi
+printf "enviando -SIGHUP al proceso $F ($PID)...\n\n"
+kill -SIGHUP $PID
+echo "terminado!"
+else
+printf "Uso:\n\t$0 [<servicio>]\n\n"
+fi

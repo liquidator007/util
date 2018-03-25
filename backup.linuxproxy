@@ -1,0 +1,17 @@
+#!/bin/sh
+
+ORG=/dev/hdg
+DST=/dev/hda
+
+echo "Poner disco ORIGEN en $ORG"
+echo "Poner disco DESTINO en $DST"
+printf "Continuar? (s/n): "
+read A
+if [ $A == "s" -o $A == "S" ]
+then
+  let MEGA=1024*1024
+  let BS=100*MEGA
+  echo "Realizando copia desde $ORG hacia $DST con bloque=$BS. Esperar..."
+  dd if=$ORG of=$DST bs=$BS
+  echo "Copia terminada"
+fi

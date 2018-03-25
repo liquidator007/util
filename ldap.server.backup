@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+then
+  printf  "Uso:\n\t$1 servidor-ldap\n\n"
+  exit 1
+fi
+
+F=/BACKUP/ldap/ldap-dump-$1-`date +'%F-%H-%M-%S'`
+
+mkdir -p /BACKUP/ldap
+
+echo realizando volcado BD y backup de config LDAP de $1 en $F...
+echo contraseña servidor LDAP:
+#ldapsearch -Wx -D "cn=Manager,dc=iescierva,dc=net" -b "dc=iescierva,dc=net" -H ldap://$1 -LLL > ${F}.ldif
+ldapsearch -Wx -D "cn=admin,dc=iescierva,dc=net" -b "dc=iescierva,dc=net" -H ldap://$1 -LLL > ${F}.ldif

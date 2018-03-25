@@ -1,0 +1,68 @@
+#Entradas: $WLAN, $WLAN0, $CH
+trap "parar $IF0" 9 15
+
+
+if [ $# -lt 1 -o $# -gt 3  ]
+then
+  printf "\nUso: $0 driver fich_salida [canal]\n\n"
+  printf "driver: ath0, ra0...\n\n"
+  exit 1
+fi
+
+tmpfich=/tmp/wifi-scripts
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+parar()
+{
+if [ $1 == "wifi0" ]
+then
+  ejecutar "kismet stop $1"
+fi
+}
+
+
+export IF=$1
+export IF0=$1
+
+if [ $IF == "ath0" ]
+then
+  IF0=wifi0
+fi
+
+if [ ! -z $3 ]
+then
+  CANAL="--channel $3"
+fi
+
+if [ ! -z $2 ]
+then
+  FICHERO="--write $2"
+fi
+
+export FAKE=00:01:0c:11:22:33
+echo FAKE=$FAKE >$tmpfich
+echo IF=$IF >>$tmpfich
+echo IF0=$IF0 >>$tmpfich
+
+ejecutar "airmon-ng stop $IF"
+
+sleep 2
+
+ejecutar "airmon-ng start $IF0"
+
+if [ $IF0 == "wifi0" ]
+then
+  IF=`airmon-ng | grep '^ath' | cut -c1-4` 
+fi
+
+ejecutar "ifconfig $IF down"
+ejecutar "macchanger --mac=$FAKE $IF"
+ejecutar "ifconfig $IF up"
+
+ejecutar "kismet"
+

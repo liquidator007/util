@@ -1,0 +1,52 @@
+#!/bin/sh
+
+#titulo     : patch.load
+#descripcion: script para aplicacion de parches a /usr/src/linux
+#
+
+if [ $# -eq 0 ]
+then
+  APP=`basename $0`
+  printf "Uso:\n\t$APP version-parche-a-instalar\n\n">&2
+  exit 1
+fi
+
+#determinar el empaquetado
+SRCDIR=$PWD
+BZ2=$SRCDIR/*$1*.bz2
+GZ=$SRCDIR/*$1*.gz
+#echo ***${BZ2}***
+#echo ***${GZ}***
+printf "Seleccionando la mejor distribucion disponible..."
+if [ -f $GZ ]
+then
+  printf "(.gz)\n"
+elif [ -f $BZ2 ]
+then
+  printf "(.bz2)\n"
+else
+  printf "no encontrado\n">&2
+  exit 1
+fi
+
+cd /usr/src
+
+printf "Extrayendo..."
+if [ -f $GZ ]
+then
+  zcat $GZ | patch -p1
+elif [ -f $BZ2 ]
+then
+  bzip2 -cd $BZ2 | patch -p1
+fi
+
+printf "extraido\n"
+
+#ANT=/usr/src/linux-`uname --release`
+NUE=/usr/src/linux-$1
+
+printf "regererando el enlace simbolico hacia $NUE...\n"
+ln -sf linux $NUE
+
+cd $DIR
+printf "Ok!\n\n"

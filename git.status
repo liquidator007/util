@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  git status
+else
+  for D in $*
+  do
+    printf "\n\n$D\n"
+    cd $D && git status
+  done
+fi

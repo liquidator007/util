@@ -1,0 +1,14 @@
+#!/bin/bash
+
+PREFIX=172.16
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso:\n\n$0 aula [nº PCs]\n\n"
+  exit 1
+fi
+
+AULA=$1
+PCS=${2-30} # if $2 undefined, use 30
+
+/util/serie 1 ${PCS} 1 ${PREFIX}.${AULA}.

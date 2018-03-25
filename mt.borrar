@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mt -f /dev/st0 rewind
+mt -f /dev/st0 weof

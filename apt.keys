@@ -1,0 +1,15 @@
+if [ $# -eq 0 ]
+then
+  echo "Uso: $0 KEY..."
+  exit 1
+fi
+
+SERVER=hkp://pgp.mit.edu
+
+for KEY in $*
+do
+  echo $KEY...
+  gpg --keyserver $SERVER --recv-keys $KEY
+  gpg --export --armor $KEY | sudo apt-key add -
+done
+

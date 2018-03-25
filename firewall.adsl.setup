@@ -1,0 +1,203 @@
+#!/bin/sh
+#
+#Script de configuración de cortafuegos y servicios: squid, junkbuster...
+#
+
+. /etc/rc.d/init.d/functions  #Ejecutar lo primero, para no perder el PATH
+
+export PATH=/util:/sbin:/etc/rc.d/init.d:/bin:/usr/bin:/usr/sbin
+
+#Este script se ejecutara normalmente desde /etc/rc.d/rc.local
+#
+#Se llama con los siguientes parametros:
+#	$1	Nombre del interfaz que conecta a red local (ej: eth1)
+#	$2	Nombre del interfaz que conecta a internet (ej: eth0)
+#	$3	Dirección IP del interfaz anterior (ej: 172.26.0.2)
+#	$4	Dirección IP del router (ej: 172.26.0.1)
+
+if [ $# -ne 4 ]
+then
+  printf "\nUso:\n\n\t$0 <if-red-local> <if-internet> <ip if-internet> <ip router>\n\n"
+  exit 1
+fi
+
+# Parametros
+IFL=$1	#Interface que conecta con la red local
+IFR=$2	#Interface que conecta con el router
+IPR=$3	#IP del interface que conecta con el router
+ROUTER=$4	#IP del router
+LO="lo"	#Loopback 
+  
+#Escribir una entrada de registro en el diario /var/log/messages
+logger user.info "Ejecutando script $0: red local=$1 internet=$2 ip-internet=$3 ip-router=$4"
+
+route del default
+route add default gw $ROUTER
+
+# Asignaciones locales 
+LOCALNET="192.168.0.0/16" 
+PRIVILEGIADOS="192.168.10.128/25" #Ordenadores prof y dpto.
+MULTIMEDIA=multimedia.deptinf.bohio.mec
+
+# Direcciones 
+TODAS="0.0.0.0/0" 
+LOOPBACK="127.0.0.1/32" 
+CLASE_A="10.0.0.0/8" 
+CLASE_B="172.16.0.0/16" 
+CLASE_C="192.168.0.0/16" 
+MULTICAST="240.0.0.0/3" 
+BROADCAST_0="0.0.0.0" 
+BROADCAST_1="255.255.255.255" 
+
+# Puertos conocidos 
+ROOT="0:1023"           # Puertos reservados a root 
+NO_ROOT="1024:65535"    # puertos no root 
+NFS="2049"              # (TCP/UDP) NFS 
+OPENWINDOWS="2000"      # (TCP) OpenWindows 
+XWINDOWS="6000:6001"    # (TCP) X Window 
+SSH="1020:1023"         # Rango de puertos de SSH 
+IRCD="6667"             # Puertos del servidor IRC 
+
+#-------------------------------- 
+# Limpiamos las reglas anteriores 
+#-------------------------------- 
+ipchains -F 
+
+#--------------------------------------------- 
+# Establecer la política por defecto 
+#      Permitir entrada 
+#      Permitir salida 
+#      Denegar IP Forward 
+#--------------------------------------------- 
+ipchains -P input   ACCEPT 
+ipchains -P forward DENY 
+ipchains -P output  ACCEPT 
+
+#-------------------------------------------------------------------------- 
+#                Spoofing y direcciones ilegales 
+#-------------------------------------------------------------------------- 
+# Evitar que entren paquetes de fuera indicando como dirección de origen 
+# nuestra IP 
+
+ipchains -A input -i $IFR -s $IPR -j DENY 
+
+# Evitar que lleguen de fuera paquetes con origen o destino 127.0.0.1 
+
+ipchains -A input -i $IFR -s $LOOPBACK -j DENY 
+ipchains -A input -i $IFR -d $LOOPBACK -j DENY 
+
+# Evitar que lleguen de fuera paquetes con origen o destino de direcciones 
+# reservadas para redes privadas 
+
+ipchains -A input -i $IFR -s $CLASE_A -j DENY 
+ipchains -A input -i $IFR -d $CLASE_A -j DENY 
+ipchains -A input -i $IFR -s $CLASE_B -j DENY 
+ipchains -A input -i $IFR -d $CLASE_B -j DENY 
+ipchains -A input -i $IFR -s $CLASE_C -j DENY 
+ipchains -A input -i $IFR -d $CLASE_C -j DENY 
+
+# Evitar que salgan hacia el exterior paquetes cuyo destino sea nuestra 
+# propia IP 
+
+ipchains -A output -i $IFR -d $IPR -j REJECT 
+
+# Evitar que salgan paquetes con origen o destino 127.0.0.1 
+
+ipchains -A output -i $IFR -s $LOOPBACK -j REJECT 
+ipchains -A output -i $IFR -d $LOOPBACK -j REJECT 
+
+# Evitar que salgan paquetes con origen o destino a direcciones reservadas 
+# para redes privadas 
+
+ipchains -A output -i $IFR -s $CLASE_A -j REJECT 
+ipchains -A output -i $IFR -d $CLASE_A -j REJECT 
+ipchains -A output -i $IFR -s $CLASE_B -j REJECT 
+ipchains -A output -i $IFR -d $CLASE_B -j REJECT 
+ipchains -A output -i $IFR -s $CLASE_C -j REJECT 
+ipchains -A output -i $IFR -d $CLASE_C -j REJECT 
+
+# Denegar paquetes de broadcast de fuera 
+
+ipchains -A input -i $IFR -s $BROADCAST_1 -j DENY 
+ipchains -A input -i $IFR -d $BROADCAST_0 -j DENY 
+
+#---------------------------------------------------------------------------- 
+# Poner aquí los servicios explícitamente permitidos 
+# auth (identd) 113, ctcp (irc) (59) 
+#---------------------------------------------------------------------------- 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR  59 -j ACCEPT 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR 113 -j ACCEPT 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR ftp -j ACCEPT
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR www -j ACCEPT
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR 110 -j ACCEPT    #pop3
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR 143 -j ACCEPT    #imap
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR  23 -j ACCEPT    #telnet
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR  25 -j ACCEPT    #smtp
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR 220 -j ACCEPT    #imap3
+
+#ipchains -A input -p icmp -i $IFR -s $TODAS -d $IPR -j ACCEPT 
+#ipchains -I 1 input -p tcp -i $IFR -s $TODAS www -j ACCEPT
+
+#----------------------------------------------------------------------------- 
+# Rechazar acceso del exterior a servicios de nuestra máquina 
+# Echa un vistazo con "netstat -a" para ver puertos abiertos por encima 
+# del 1023 y por tanto deberíass cerrar 
+#----------------------------------------------------------------------------- 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR $ROOT -l -j DENY 
+ipchains -A input -p udp -i $IFR -s $TODAS $NO_ROOT -d $IPR $ROOT -l -j DENY 
+
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR $NFS -j DENY 
+ipchains -A input -p udp -i $IFR -s $TODAS $NO_ROOT -d $IPR $NFS -j DENY 
+
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR $OPENWINDOWS -j DENY 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR $XWINDOWS -j DENY 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR $SSH -j DENY 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR $IRCD -j DENY 
+
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR 3128 -j DENY 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR 3130 -j DENY 
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR 8080 -j DENY 
+
+ipchains -A input -p tcp -i $IFR -s $TODAS $NO_ROOT -d $IPR 1024 -j DENY 
+ipchains -A input -p udp -i $IFR -s $TODAS $NO_ROOT -d $IPR 1024 -j DENY 
+ipchains -A input -p udp -i $IFR -s $TODAS $NO_ROOT -d $IPR 1026 -j DENY 
+ipchains -A input -p udp -i $IFR -s $TODAS $NO_ROOT -d $IPR 1119 -j DENY 
+ipchains -A input -p udp -i $IFR -s $TODAS $NO_ROOT -d $IPR 3401 -j DENY 
+
+#----------------------------------------------- 
+# Forward con enmascaramiento para la red local 
+#----------------------------------------------- 
+
+#Establecer timeouts
+ipchains -M -S 7200 10 160
+
+#forwarding con mascarada de los ordenadores de profesores y departamento
+#El resto de equipos solamente puede acceder a la red a través de proxies
+#como squid (puerto 80) y junkbuster (puerto 81) en el sistema proxy.bohio.mec
+ipchains -I forward 1 -i $IFR -s $PRIVILEGIADOS -p all -d $TODAS -j MASQ
+#Abrir el router NAT a la máquina jefatura1 y secretario
+ipchains -I forward 1 -i $IFR -s 192.168.4.2/32 -p all -d $TODAS -j MASQ
+ipchains -I forward 1 -i $IFR -s 192.168.4.1/32 -p all -d $TODAS -j MASQ
+
+#ipchains -I input 1 -i $IFL -s $TODAS -p tcp -d ! 192.168.0.0/16 80 -j REDIRECT 81
+#ipchains -I input 1 -i $IFL -s $TODAS -p udp -d ! 192.168.0.0/16 www -j REDIRECT 81
+
+##########################################################################
+#REGLAS DE CORTAFUEGOS LOCALES
+##########################################################################
+
+#Desactivar puestos de alumnos en las aulas
+logger user.info "Desactivando aulas en ip-up.local"
+disable-a1
+disable-a2
+disable-a3
+
+##########################################################################
+#SERVICIOS
+##########################################################################
+touch /var/run/ip-up.activo	#fichero de marca
+#squid restart		#reiniciar squid
+#junkbuster restart	#reiniciar junkbuster
+#fetchmail		#no arrancar como daemon, lo lanzará cron
+#/util/news.fetch	#leafnode (bajar news)
+/usr/sbin/sendmail -q   #enviar correo pendiente en cola

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+for F in `/util/serie 1 111 1`
+do
+echo $F
+/usr/games/wiithon -e <<!
+
+
+
+
+
+$F
+
+!
+done

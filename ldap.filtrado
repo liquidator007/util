@@ -1,0 +1,7 @@
+if [ $# -eq 0 ]
+then
+  echo "Uso: $0 fich-ldif..."
+  exit 1
+fi
+
+fgrep -v structuralObjectClass $* | fgrep -v entryUUID | fgrep -v creatorsName | fgrep -v createTimestamp | fgrep -v entryCSN | fgrep -v modifiersName | fgrep -v modifyTimestamp

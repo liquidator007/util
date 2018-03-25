@@ -1,0 +1,146 @@
+#!/bin/bash
+
+#parametrizacion
+RUTA_DIFFS=/etc/dansguardian/bl.update
+RUTA_BLACK=/etc/dansguardian/blacklists
+TEST_FILE=NOMEBORRES.NONONO
+RETROCEDER_DIAS=7
+WAIT=5
+
+aplicar_diff()
+{
+   #entrada: en $1, el nombre de fichero sin ruta ni extension
+
+   #parche ya aplicado
+   if [ -f $RUTA_DIFFS/${1}.log ]
+   then
+     echo $1 ya aplicado
+     return 1
+   fi
+
+   cd $RUTA_DIFFS
+
+   URL=http://urlblacklist.com/diffs/$1.gz
+   printf "$1: descargando, "
+
+   if [ ! -f $RUTA_DIFFS/$1.gz ]
+   then 
+     wget -c --wait=$WAIT --random-wait --proxy=off $URL  >/dev/null 2>&1
+     if [ $? -ne 0 ]
+     then
+       echo "no se ha podido descargar"
+       return 2
+     fi
+   fi
+
+   
+   if [ $RUTA_DIFFS/$1.gz -ot $RUTA_BLACK/$TEST_FILE ]
+   then
+     echo es antiguo, no hago nada.
+     return 1
+   fi
+
+   printf "descomprimiendo, "
+   gunzip -f $1.gz
+
+   printf "parcheando, "
+   cd $RUTA_BLACK
+   patch -f -p2 < $RUTA_DIFFS/$1 > $RUTA_DIFFS/$1.log
+
+   echo "fin"
+
+   #archivar el diff
+   gzip $RUTA_DIFFS/$1
+
+   return 0
+}
+
+
+if [ $# -gt 1 ]
+then
+  printf "\n\nUso:\n\t$0 [DIAS]\n\n"
+  exit 1
+fi
+
+if [ $# -eq 1 ]
+then
+  RETROCEDER_DIAS=$1
+fi
+
+
+#comprobaciones preliminares
+
+#existe el comando "rl"?
+if [ ! -f /usr/bin/rl ]
+then
+  echo "instalando el paquete ranzomize-lines..."
+  apt-get --assume-yes --force-yes install randomize-lines
+fi
+
+#existe la ruta de los diffs?
+if [ ! -d $RUTA_DIFFS ]
+then
+  mkdir -p $RUTA_DIFFS 2>/dev/null
+fi
+
+#existe TEST_FILE?
+if [ ! -f $RUTA_BLACK/$TEST_FILE ]
+then
+  touch $RUTA_BLACK/$TEST_FILE
+fi
+
+#permisos ok en RUTA_DIFFS? 
+if [ ! -x $RUTA_DIFFS -o ! -w $RUTA_DIFFS ]
+then
+  echo "No se puede escribir en $RUTA_DIFFS"
+  exit 1
+fi
+
+#permisos ok en RUTA_BLACK? 
+if [ ! -x $RUTA_BLACK -o ! -w $RUTA_BLACK ]
+then
+  echo "No se puede escribir en $RUTA_BLACK"
+  exit 1
+fi
+
+let N=0
+
+while [ $RETROCEDER_DIAS -ge 0 ]
+do
+  FECHA=`date --date="$RETROCEDER_DIAS days ago" +%Y%m%d`
+  FICHERO=changes-$FECHA.diff
+  aplicar_diff $FICHERO
+  if [ $? -eq 0 ]
+  then
+    let N=$N\+1
+  fi 
+  let RETROCEDER_DIAS=$RETROCEDER_DIAS\-1
+done
+
+echo "Se han aplicado $N parches"
+
+if [ $N -gt 0 ]
+then
+  printf "desordenando listas para carga rapida..."
+  find $RUTA_BLACK -name '*[^.][^u]' -type f -exec rl '{}' -o '{}'.u \;
+  echo "ok"
+
+  #Ojo, el reload no siempre funciona. Mejor restart.
+  printf "recargando dansguardian..." 
+  /etc/init.d/dansguardian reload
+  echo "ok"
+
+  #suprimida esta parte para poder reiniciar el servicio manualmente
+  #printf "eliminando listas desordenadas tras la carga..."
+  #find $RUTA_BLACK -name '*.u' -type f -exec rm {} \;
+  #echo "ok"
+fi
+
+printf "borrando ficheros residuales..."
+find $RUTA_BLACK -type f -name '*.processed' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.processed.u' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.rej' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.rej.u' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.orig' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.orig.u' -exec rm {} \;
+echo "ok"

@@ -1,0 +1,45 @@
+#!/bin/sh
+DIR=`pwd`
+PATH=$PATH:/util
+MIRRORS=/mnt/apt
+echo Actualizando mirror sites en $MIRRORS
+cd $MIRRORS
+
+#no interesa esto, porque se trae la sede completa
+#for SITE in *
+#do
+#wget $SITE &
+#done
+
+#MEC
+#(wget -c www.mec.es; wget -c www.pntic.mec.es;wget -c www.mec.es/dp/murcia) &
+
+#wget -c ftp://gd.tuwien.ac.at/opsys/linux/fedora/core/1/i386/iso/yarrow-i386-disc1.iso
+wget -c ftp://ftp.tu-chemnitz.de/pub/linux/fedora-core/1/i386/iso/yarrow-i386-disc1.iso &
+wget -c ftp://ftp.tu-chemnitz.de/pub/linux/fedora-core/1/i386/iso/yarrow-i386-disc2.iso &
+wget -c ftp://ftp.tu-chemnitz.de/pub/linux/fedora-core/1/i386/iso/yarrow-i386-disc3.iso
+
+
+#Los simpsons
+#wget -c www.snpp.com &
+#wget -c www.labyrinth.net.au/~kwyjibo 
+#wget -c members.xoom.com/RobertMG/simpsons.htm
+
+#La botica de la abuela
+#wget -c www.boticabuela.com 
+
+#Loreena McKennitt
+#wget -c www.quinlanroad.com 
+#wget -c www.ualberta.ca/~lslater/oldwaysfaq.html
+
+#Police
+#wget -c www.geocities.com/SunsetStrip/2106/lyrics.html
+
+#Sendmail
+#wget -c www.sendmail.org &
+
+#Internet
+#wget -c www.w3.org &
+
+cd $DIR
+echo FIN

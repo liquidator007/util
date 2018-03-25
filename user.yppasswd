@@ -1,0 +1,5 @@
+echo "Cambiar la clave en la B.D. NIS (yppasswdd debe estar en ejecución)"
+/etc/rc.d/init.d/yppasswdd status
+/etc/rc.d/init.d/ypserv status
+/etc/rc.d/init.d/ypbind status
+yppasswd $*

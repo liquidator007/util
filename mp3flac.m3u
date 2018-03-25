@@ -1,0 +1,43 @@
+#!/bin/bash
+
+#mp3flac.m3u
+#Este script recibe como entrada un directorio, comprueba su tiene ficheros .mp3, .ogg y .flac, y si los tiene
+#pero no tiene una lista de reproducción .m3u entonces la genera automaticamente
+
+if [ $# -ne 1 -o ! -d "$1" ]
+then
+  printf "Uso:\n\t $0 ruta-a-disco\n\n"
+  exit 1
+fi
+
+CARPETA="$1"
+
+cd "$CARPETA"
+
+#Ver si ya existe una lista para no hacer nada
+ls -1 *.[mM]3[uU] >/dev/null 2>&1
+if [ $? -eq 0 ]
+then
+#  echo "Ya existe lista en $CARPETA"
+  exit 1
+fi
+
+ls -1 *.[mM][pP]3 >/dev/null 2>&1
+HAY_MP3=$?
+
+ls -1 *.[fF][lL][aA][cC] >/dev/null 2>&1
+HAY_FLAC=$?
+
+ls -1 *.[oO][gG][gG] >/dev/null 2>&1
+HAY_OGG=$?
+
+if [ $HAY_MP3 -eq 0 -o $HAY_FLAC -eq 0 -o $HAY_OGG -eq 0 ]
+then
+#  echo Creando lista en $CARPETA...
+  DISCO=`basename "$PWD"`
+  cd ..
+  ARTISTA=`basename "$PWD"`
+  echo Creando "${CARPETA}/${ARTISTA}-${DISCO}.m3u"
+  cd "$CARPETA"
+  ls -1 *.[fF][lL][aA][cC] *.[mM][pP]3 *.[oO][gG][gG] 2>/dev/null > "${CARPETA}/${ARTISTA}-${DISCO}.m3u"
+fi

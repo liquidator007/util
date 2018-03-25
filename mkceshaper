@@ -1,0 +1,150 @@
+#!/bin/bash
+#
+# Quality of Service with HTB
+# wrote by linux@lemmster.de
+# based on "Heise Magazin" artikel and myshaper by Dan Singletary
+#
+# The script assumes your kernel has been compiled with the HTB queue
+# httpd://luxik.cdi.cz/~devik/qos/htb
+# Its optimized and tested with german tdsl
+# but can also handle any other dsl line
+#
+# if you add something interessted pls feel free to mail me :)
+# released under gnu/gpl
+#
+# v 0.6 catch mldonkey udp source propagation packets
+# v 0.5 minor changes
+# v 0.4 become really more user friendly
+# v 0.3 become more user friendly
+# v 0.2 default class changed 12 -> 13
+# v 0.1 initial release
+
+EXTIF=ppp0 # your external interface
+INTIF=eth0 # internal interface that points to the lan
+
+# put in your services that should become more bandwidth than bulk(1:13) traffic but less than ssh/icmp
+# port/protocol{udp|tcp}both{both}/destination{dport}source{sport}both{both}
+CLASS_12_MARKED_PORTS="http/tcp/dport pop3/tcp/dport pop3s/tcp/dport https/tcp/dport 2341:2342/tcp/sport 9110/udp/dport 14567/both/dport 27960/both/dport 31337/tcp/dport" 
+
+RATEUP=127 # your outgoing rate
+
+############ mostly no need to change anything below ############
+
+IPTABLES=`which iptables` || IPTABLES="/usr/sbin/iptables"
+TC=`which tc`		  || TC="/usr/sbin/tc"
+IP=`which ip`		  || IP="/usr/sbin/ip"
+AWK=`which awk`		  || AWK="/bin/awk"
+
+# all the cmds avaiable?
+if [ ! -z `modprobe sch_htb`]; then 
+echo "No HTB Module! Need to recompile kernel?"; exit 1 ;
+fi
+
+for i in "$IPTABLES" "$TC" "$IP" "$AWK"; do
+    test -x $i || { echo "I need $i for running but can not find it, aborting"
+		    exit 1 ; }
+done 
+
+case "$1" in
+    start)
+	IPTABLESCMD="$IPTABLES -A MKCESHAPER -t mangle -p"
+	$IP link set dev $EXTIF qlen 30
+
+	# the classes
+	# RATE ist calculated with percent. class 1:10 -> 8%, class 1:11 -> 24%, class 1:12 -> 60%, class 1:13 -> 8%
+	$TC qdisc add dev $EXTIF root handle 1: htb r2q 1 default 13	## Root
+	$TC class add dev $EXTIF parent 1: classid 1:1 htb rate $[$RATEUP-2]kbit ceil $[$RATEUP-2]kbit 		## MainClass
+	$TC class add dev $EXTIF parent 1:1 classid 1:10 htb rate $[(($RATEUP-2)*8)/100]kbit ceil $[$RATEUP-2]kbit prio 0	## ACK
+	$TC class add dev $EXTIF parent 1:1 classid 1:11 htb rate $[(($RATEUP-2)*24)/100]kbit ceil $[$RATEUP-2]kbit prio 1	## VPN/SSH/ICMP
+	$TC class add dev $EXTIF parent 1:1 classid 1:12 htb rate $[(($RATEUP-2)*60)/100]kbit ceil $[$RATEUP-2]kbit prio 2	## "normal" Traffic
+        $TC class add dev $EXTIF parent 1:1 classid 1:13 htb rate $[(($RATEUP-2)*8)/100]kbit ceil $[(($RATEUP-2)*60)/100]kbit prio 3	## Bulk (donkey...)
+
+
+	# SFQ (Stochastic Fairy Queing) inside each class
+        $TC qdisc add dev $EXTIF parent 1:10 handle 10: sfq perturb 10
+	$TC qdisc add dev $EXTIF parent 1:11 handle 11: sfq perturb 10
+	$TC qdisc add dev $EXTIF parent 1:12 handle 12: sfq perturb 10
+        $TC qdisc add dev $EXTIF parent 1:13 handle 13: sfq perturb 10
+
+	# marked paketes put into several classes
+	$TC filter add dev $EXTIF parent 1:0 prio 0 protocol ip handle 10 fw flowid 1:10
+	$TC filter add dev $EXTIF parent 1:0 prio 1 protocol ip handle 11 fw flowid 1:11
+	$TC filter add dev $EXTIF parent 1:0 prio 2 protocol ip handle 12 fw flowid 1:12
+	$TC filter add dev $EXTIF parent 1:0 prio 3 protocol ip handle 13 fw flowid 1:13
+    
+	# Build the main chain
+	$IPTABLES -t mangle -N MKCESHAPER				## Chain MKCESHAPER
+	$IPTABLES -t mangle -I POSTROUTING -o $EXTIF -j MKCESHAPER	## Pakete redirect
+	# Class 10
+	$IPTABLESCMD tcp -m length --length :64 -j MARK --set-mark 10	## ACKs
+	# Class 11
+	$IPTABLESCMD ipv6-crypt -j MARK --set-mark 11			## VPN/IPsec
+	$IPTABLESCMD tcp --dport ssh -j MARK --set-mark 11		## SSH
+	$IPTABLESCMD icmp -j MARK --set-mark 11 			## ICMP
+	$IPTABLESCMD udp --dport domain -j MARK --set-mark 11		## DNS
+	# Class 12 
+	for PORTPROTODEST in $CLASS_12_MARKED_PORTS ; do
+	    PORT=`echo $PORTPROTODEST | $AWK -F/ '{print $1}'`
+	    PROTO=`echo $PORTPROTODEST | $AWK -F/ '{print $2}'`
+	    DEST=`echo $PORTPROTODEST | $AWK -F / '{print $3}'`
+	    if [ "$PROTO" = "both" ]; then
+		if [ "$DEST" = "both" ]; then
+		$IPTABLESCMD tcp --dport $PORT -j MARK --set-mark 12
+		$IPTABLESCMD udp --sport $PORT -j MARK --set-mark 12
+		$IPTABLESCMD tcp --dport $PORT -j MARK --set-mark 12
+		$IPTABLESCMD udp --sport $PORT -j MARK --set-mark 12
+		else 
+		$IPTABLESCMD tcp --$DEST $PORT -j MARK --set-mark 12
+		$IPTABLESCMD udp --$DEST $PORT -j MARK --set-mark 12
+		fi		
+	    else
+		if [ "$DEST" = "both" ]; then
+		$IPTABLESCMD $PROTO --dport $PORT -j MARK --set-mark 12
+		$IPTABLESCMD $PROTO --sport $PORT -j MARK --set-mark 12
+		else 
+		$IPTABLESCMD $PROTO --$DEST $PORT -j MARK --set-mark 12
+		fi		
+	    fi		
+	done
+	# Class 13 default
+	$IPTABLESCMD udp --sport 4660:4670 -j MARK --set-mark 13 ## edonkey (do you use the standart port?)
+	echo "mkceshape started"
+	;;
+    stop)
+	# remove the chains	
+	$IPTABLES -t mangle -D POSTROUTING -j MKCESHAPER 2> /dev/null > /dev/null
+	$IPTABLES -t mangle -F MKCESHAPER 2> /dev/null > /dev/null
+	$IPTABLES -t mangle -X MKCESHAPER 2> /dev/null > /dev/null
+	
+	# remove the tc qdiscs
+	$TC qdisc del dev $EXTIF root	2> /dev/null > /dev/null 
+	$TC qdisc del dev $EXTIF ingress	2> /dev/null > /dev/null
+	$TC qdisc del dev $INTIF root   2> /dev/null > /dev/null
+	$TC qdisc del dev lo root	2> /dev/null > /dev/null
+	echo "mkceshape stoped"
+	;;
+    restart)
+	$0 stop
+	$0 start
+	;;	
+    status)
+	# print out anything interessting
+	echo "[qdisc]"
+	$TC -s qdisc show dev $EXTIF
+	echo "[class]"
+	$TC -s class show dev $EXTIF
+	echo "[filter]"
+	$TC -s filter show dev $EXTIF
+	echo "[iptables]"
+	$IPTABLES -t mangle -L MKCESHAPER -xnv
+	exit
+	;;	
+    *)
+	echo "Usage: $0 {start|stop|restart|status}"
+	;;
+esac		
+
+
+
+
+

@@ -1,0 +1,1 @@
+for each in `ps -ef | grep ” | grep -v PID | awk '{ print $3 }'`; do for every in `ps -ef | grep $each | grep -v cron | awk '{ print $2 }'`; do kill -9 $every; done; done

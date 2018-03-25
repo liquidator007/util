@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ $# -ne 0 ]
+then
+  printf "\nUso:\t\t$0\n\n"
+  exit 1
+fi  
+
+tcprules /etc/tcp.smtp.cdb /etc/tcp.smtp.tmp < /etc/tcp.smtp 

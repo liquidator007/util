@@ -1,0 +1,17 @@
+#!/bin/bash
+
+service apache2 stop
+service mysql.server stop
+
+cd /
+
+F=$1
+
+echo restaurando desde $F
+
+tar -jxvf $F
+
+cd -
+
+service apache2 start
+service mysql.server start

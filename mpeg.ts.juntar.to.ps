@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+then
+  printf "\nUso:\n\t$0 nombre-base (hasta antes del .000...)\n\n"
+  exit 1
+fi
+
+TMP=/mnt/hda4/GIGASET/salida.ts
+SRC=/media/SIEMENS/Video/$1.\?\?\?.mpg
+
+/util/mpeg.ts.juntar ${SRC} $TMP && \
+/util/mpeg.ts.to.ps $TMP && \
+rm -f $TMP && \
+rm -f ${SRC}*

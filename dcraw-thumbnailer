@@ -1,0 +1,32 @@
+#! /bin/bash
+
+# NOTE: No "." in file path (bug in dcraw).
+TEMPDIR=$(mktemp -t -d dcraw-thumnailer-XXXXXX) || exit 1
+trap "rm -rf $TEMPDIR" EXIT
+SUFFIX=${1##*.}
+# Suffix sanity checks:
+if test "$SUFFIX" = "$1" ; then
+    SUFFIX=""
+fi
+if test "${SUFFIX//[-_A-Za-z0-9]/}" != "" ; then
+    SUFFIX=""
+fi
+TEMP_BASE=$TEMPDIR/rawfile
+TEMP=$TEMP_BASE.$SUFFIX
+
+# "ln -s" is faster, but does not work for remote files.
+if [ "${1##file://*}" ]
+then
+  gnomevfs-copy "$1" "file://$TEMP"
+  chmod +w $TEMP
+else
+  # unescape URI and convert to real file name
+  eval "filename=\$'${1//\%/\\x}'"
+  ln -s "${filename#file://}" "$TEMP"
+fi
+
+cd $TEMPDIR
+dcraw -h -w $TEMP
+cd -
+mv $TEMP_BASE.p[bgp]m "$2"
+

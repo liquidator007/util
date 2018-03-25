@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso:\n\t$0 [-d] path-to-dir...\n\n"
+  exit
+fi
+
+if [ "$1" == "-d" ]
+then
+  delete=$1
+  shift
+fi
+ 
+for FOLDER in "$*"
+do
+
+  if [ -d "${FOLDER}" ]
+  then
+    find "${FOLDER}" -type f -name '*.[mM][oO][vV]' -exec /util/mov.to.mp4 $delete {} \;
+  fi
+done 
+

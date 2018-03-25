@@ -1,0 +1,60 @@
+#!/bin/bash
+
+#Nota: reescribir este modulo en PHP para cargar la tabla de libros de la B.D.
+
+if [ $# -eq 0 ]
+then
+  printf "\nUso:\n\t$0 dir ...\n\n"
+  exit 1
+fi
+
+PATH=/util:$PATH
+
+#variables
+GRP=biblio-md5
+MD5=.md5sum
+DUP=.md5dup
+UNI=.md5uni
+
+#Crear un usuario virtual al que se asignaran los libros indizados
+groupadd $GRP >/dev/null 2>&1	
+
+for D in $*
+do
+  if [ -d $D ]		#es un directorio
+  then
+    DIR=`pwd`
+    cd $D
+    if [ $? -eq 0 ]	#se pudo entrar
+    then
+      #añadir al fichero MD5 las sumas de los ficheros que no pertenezcan a GRP
+      find . -name '*.c' -type f ! -group $GRP -exec md5.calcular {} $GRP $MD5 \; 
+      #ordenar MD5
+      cat $MD5 | sed 's/ /:/' | sort --key=1,32 > ${MD5}.sort
+      rm -f $MD5
+      mv ${MD5}.sort $MD5
+      #crear el fichero de MD5 duplicados
+      uniq --repeated --check-chars=32 $MD5 | cut -f1 -d: > $DUP
+      #crear el fichero de MD5 no duplicados
+      uniq --unique --check-chars=32 $MD5 | cut -f1 -d: > $UNI
+#      #crear enlaces ocultos a unicos
+#      for F in `join -t : $UNI $MD5`
+#      do
+#        SUMA=`echo $F | cut -d : -f1`
+#        FICH=`echo $F | cut -d : -f2`
+#	ln -s $FICH .$SUMA >/dev/null 2>&1
+#      done
+      #crear enlaces ocultos a ficheros duplicados
+      let X=0
+      for F in `join -t : $DUP $MD5`
+      do
+	let X=X+1
+        SUMA=`echo $F | cut -d : -f1`-$X
+        FICH=`echo $F | cut -d : -f2`
+	ln -s $FICH DUP-$SUMA >/dev/null 2>&1
+      done
+
+      cd $DIR		#volver
+    fi
+  fi
+done

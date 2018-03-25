@@ -1,0 +1,48 @@
+#!/bin/bash
+
+#zfs.send.incremental2
+#sends the last snapshot of the selected dataset to other machine/dataset, detecting the last, common dataset previously synchronized, in order to optimize incremental transmission
+
+if [ $# -ne 4 ]
+then
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset\n\n\n"
+  exit 1
+fi
+
+sudo zfs list -t snapshot -r "${1}" -H -o name -s creation | cut -f 2 -d'@' | sort > /tmp/snap_local
+R1=$?
+ssh -i $2 $3 "zfs list -t snapshot -r ${4} -H -o name -s creation | cut -f 2 -d'@' | sort" > /tmp/snap_remote
+R2=$?
+
+if [ $R1 -ne 0 ]
+then 
+  printf "could't read the local snapshot list for ${1}\n"
+  exit 1
+fi
+if [ $R2 -ne 0 ]
+then 
+  printf "could't read the remote snapshot list for ${1}\n"
+  exit 1
+fi
+
+LASTCOMMON=${1}@$(comm -1 -2 /tmp/snap_local /tmp/snap_remote |  awk -F'[ -]' '{print $4$5$6$7,$0}' | sort | tail -1 | cut -f2 -d' ')
+LASTLOCAL=$(sudo zfs list -t snapshot -r "${1}" -H -o name -s creation | tail -1 )
+
+if [ -z "$LASTCOMMON" ]
+then
+  printf "couldn't find a common snapshot\n"
+  exit 1
+fi
+
+echo Last common snapshot: $LASTCOMMON
+echo Last local snapshot: $LASTLOCAL
+
+if [ "$LASTLOCAL" == "$LASTCOMMON" ]
+then
+  echo Nothing to do!!!
+  exit 1
+fi
+
+echo zfs send -i "${LASTCOMMON}" "${LASTLOCAL}" \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
+ 
+zfs send -i "${LASTCOMMON}" "${LASTLOCAL}" | ssh -i "${2}" "${3}" zfs recv -F "${4}"

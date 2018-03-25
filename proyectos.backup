@@ -1,0 +1,32 @@
+#!/bin/bash
+
+service apache2 stop
+service mysql.server stop
+
+cd /
+F=/backups/proyecto-`date +%Y-%m-%d-%H-%M-%S`.tar.bz2
+
+echo salvando copia en $F
+
+tar -jcvf $F /var/www /etc/php5 /etc/apache2 /etc/my.cnf /etc/mysql /var/apache2 /util/proyectos.backup \
+	 /etc/init.d/mysql* /usr/local/mysql/data/* \
+	 /sbin/service  \
+	 /util/*md5* \
+#	 /etc/group \
+#	 /etc/passwd \
+	 /opt/phpMyAdmin \
+	 /opt/phpMyAdmin-* \
+	 /opt/phpldapadmin* \
+	 /var/moodledata \
+	 /opt/moodle \
+	 /opt/htdig \
+	 /opt/webalizer \
+	 /var/www/cgi-bin
+
+chown root.www-data $F
+chmod u=rwx,g=rx,o= $F
+
+cd -
+
+service apache2 start
+service mysql.server start

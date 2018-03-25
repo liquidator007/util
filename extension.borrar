@@ -1,0 +1,10 @@
+for A in `find . -name '*.en' -print`
+do
+  SRC=$A
+  DST=`sed 's/\.en$//' <<!
+$SRC
+!
+`
+printf  "$SRC --> $DST\n"
+mv $SRC $DST
+done

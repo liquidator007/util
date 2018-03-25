@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# este script entra en directorio(s) que contiene(n) libros/documentos y los
+# indexa mediante md5 en una tabla de B.D. mySQL
+
+if [ $# -le 1 ]
+then
+  printf "\nUso:\n\t$0 DocumentRoot ruta-absoluta ...\n\n"
+  exit 1
+fi
+
+RUTA=/util
+DOCUMENT_ROOT=$1
+
+echo "Limpiando la casa..."
+php $RUTA/md5.limpiar.php $1
+
+shift
+
+echo "Insertando nuevas entradas..."
+
+for D in "$*"
+do
+echo dentro de $D
+  if [ -d "$D" ]		#es un directorio
+  then
+    DIR=`pwd`
+    cd "$D"
+    if [ $? -eq 0 ]	#se pudo entrar
+    then
+      #añadir al fichero MD5 las sumas de los ficheros que no pertenezcan a GRP
+      echo indizando la carpeta $D...
+      find -H "$D" -type f -exec php $RUTA/md5.php ${DOCUMENT_ROOT} {} \; 
+      cd $DIR		#volver
+    fi
+  fi
+done

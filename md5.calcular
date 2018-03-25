@@ -1,0 +1,14 @@
+#!/bin/bash
+
+trap '' SIGTERM SIGKILL
+
+#asigna el fichero dado al grupo, calcula su suma y la guarda en destino
+if [ $# -ne 3 ]
+then
+  printf "\nUso:\n\t$0 fichero grupo destino\n\n"
+  exit 1
+fi
+
+#echo $*
+echo `md5sum $1` >> $3
+chgrp $2 $1

@@ -1,0 +1,26 @@
+USO="\n\n\tUso:\n\t $0 [essid] [s:clave]\n\n"
+
+if [ $# -gt 2 ]
+then
+  printf $USO
+  exit 1
+fi
+
+if [ $# -eq 0 ]
+then
+  iwlist wlan0 scan
+  printf "$USO"
+  exit
+fi
+
+iwconfig wlan0 mode managed
+
+if [ $# -eq 2 ]
+then
+  iwconfig wlan0 key restricted $2
+fi
+
+iwconfig wlan0 essid $1
+ifconfig wlan0 up
+dhclient wlan0
+

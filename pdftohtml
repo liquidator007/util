@@ -1,0 +1,29 @@
+#!/bin/csh -f
+
+if ($#argv != 2) then
+  echo "Usage: pdftohtml <file.pdf> <file.html>"
+  exit 1
+endif
+
+pdfinfo $argv[1] |\
+gawk '\
+  BEGIN { found=0 } \
+  /^Title:/ { printf("<title>%s</title>\n", substr($0,15)); found=1 } \
+  END { if (found==0) { printf("<title>Untitled</title>\n") } }' \
+  > $argv[2]
+
+pdfinfo $argv[1] |\
+gawk '\
+  /^Keywords:/ { printf("<meta http-equiv=\"keywords\" content=\"%s\">\n", \
+                        substr($0,15)) } \
+  /^Author:/   { printf("<meta http-equiv=\"author\" content=\"%s\">\n", \
+                        substr($0,15)) }' \
+  >> $argv[2]
+
+echo "<body>" >> $argv[2]
+echo "<pre>" >> $argv[2]
+
+pdftotext $argv[1] - >> $argv[2]
+
+echo "</pre>" >> $argv[2]
+echo "</body>" >> $argv[2]

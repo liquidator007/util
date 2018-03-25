@@ -1,0 +1,31 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+#VERSION=1.5.5
+VERSION=2.0.4
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+#wget --continue http://ffmpegthumbnailer.googlecode.com/files/ffmpegthumbnailer-$VERSION.tar.gz && 
+#tar xvfz ffmpegthumbnailer-$VERSION.tar.gz && \
+#cd ffmpegthumbnailer-$VERSION 
+
+
+echo Construyendo ffmpegthumbnailer [svn]...
+ejecutar "apt-get --yes install libpng12-dev"
+ejecutar "apt-get --yes remove libffmpegthumbnailer3 libffmpegthumbnailer-dev"
+cd $BUILDPATH && \
+svn checkout http://ffmpegthumbnailer.googlecode.com/svn/trunk/ ffmpegthumbnailer 
+cd ffmpegthumbnailer
+./autogen.sh
+#no poner --disable-shared, necesitamos las librerias para mediatomb
+./configure --prefix=/usr/local 
+make && \
+sudo checkinstall --pkgname=ffmpegthumbnailer --pkgversion "4:0.5+svn`date +%Y%m%d`" --backup=no --default && \
+make distclean
+
+#sudo ln -s  /usr/local/lib/libffmpegthumbnailer.so.3 /lib

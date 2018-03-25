@@ -1,0 +1,4 @@
+service slapd stop
+cd /
+tar zcvf ldapauth-server-backup.tgz /util/ldap* /etc/ldap /etc/ldap.conf /etc/auth-client-config/profile.d/open_ldap /etc/pam.d/gdm /etc/pam.d/login /etc/security/group.conf /etc/nsswitch.conf /var/lib/ldap /etc/pam.d/common-account /etc/pam.d/common-password /etc/pam.d/common-auth /etc/pam.d/common-session 
+service slapd start

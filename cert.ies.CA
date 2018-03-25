@@ -1,0 +1,7 @@
+cd /certs
+
+rm -rf demoCA
+
+/util/CA.sh -newca
+
+cp demoCA/cacert.pem iesCA.pem

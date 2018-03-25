@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#Todos los logs incluso comprimidos, procesados por orden de fecha
+#( zcat `ls -1r /var/log/mail.log.*.gz` ; cat /var/log/mail.log.1 /var/log/mail.log ) | /opt/pflogsumm/pflogsumm.pl 
+
+#solamente los dos logs descomprimidos (dos semanas en rotación normal)
+( cat /var/log/mail.log.1 /var/log/mail.log ) | /opt/pflogsumm/pflogsumm.pl 

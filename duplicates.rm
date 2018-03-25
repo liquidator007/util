@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUso:\n\t$0 ruta...\n\n"
+  exit 1
+fi
+
+for R in "$*"
+do
+  echo Procesando $R...
+
+  echo "Borrando enlaces duros que tengan más de un link..."
+  find "$R" -type f -links +1 -exec rm {} \;
+
+  echo "Borrando directorios que se hayan quedado vacíos..."
+
+  RET=1
+  while [ $RET -eq 1 ]
+  do
+    find "$R" -type d -links 2 -exec rmdir {} \; >/dev/null 2>&1
+    RET=$?
+  done
+done

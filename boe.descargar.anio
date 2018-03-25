@@ -1,0 +1,48 @@
+#!/bin/bash
+#descarga del BOE dada el año
+
+trap 'echo Recibido SIGTERM; exit 1' SIGTERM
+trap 'echo Recibido SIGKILL; exit 1' SIGKILL
+
+PATH=$PATH:/util:/bin:/usr/bin
+
+A_MIN=1998	#primer año en que se publica el BOE electronico a texto completo
+A_ACT=`date +%Y`
+M_ACT=`date +%m`
+D_ACT=`date +%d`
+
+echo Actual: $D_ACT $M_ACT $A_ACT
+
+C=`basename $0`
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUso:\n\t $C año\n\n"
+  exit 1
+fi
+
+if [ $1 -lt $A_MIN -o $1 -gt $A_ACT ]
+then
+  printf "\nAño incorrecto\n\n"
+  exit 1
+fi
+
+for M in `serie 1 12 1`
+do
+  for D in `serie 1 31 1`
+  do
+    if [ $1 -eq $A_ACT ]
+    then 
+      if [ $M -gt $M_ACT ]
+      then
+        exit 1
+      elif [ $M -eq $M_ACT -a $D -gt $D_ACT ]
+      then
+        exit 1
+      fi
+    fi 
+    echo Descargando BOE del $D $M $1...
+    boe.descargar $1 $M $D
+  done
+done
+

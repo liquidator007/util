@@ -1,0 +1,34 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]
+then
+  printf "\nUso:\n\t$0 segundos interface...\n\n"
+  exit 1
+fi
+
+SLEEP=10	#Pause after ifconfig down
+S=$1
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n"
+  sh -c "$1"
+}
+
+shift
+
+while true
+do
+  for IF in $*
+  do
+    date
+    ejecutar "service network-manager stop"
+    ejecutar "ifconfig $IF down"
+    ejecutar "sleep $SLEEP"
+    ejecutar "macchanger -r $IF"
+    ejecutar "ifconfig $IF up"
+    ejecutar "service network-manager start"
+    echo
+  done
+  ejecutar "sleep $S"
+done

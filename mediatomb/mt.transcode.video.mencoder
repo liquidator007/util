@@ -1,0 +1,9 @@
+#!/bin/bash
+input="$1"
+output="$2"
+
+exec mencoder "$input" \
+-oac lavc -ovc lavc -of mpeg \
+-lavcopts vcodec=mpeg2video:keyint=1:vbitrate=200000:vrc_maxrate=9000:vrc_buf_size=1835 \
+-vf harddup -mpegopts muxrate=12000 \
+-o "$output"

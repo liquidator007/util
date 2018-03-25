@@ -1,0 +1,1 @@
+nmap --script p2p-conficker,smb-os-discovery,smb-check-vulns -p- --script-args checkall=1,safe=1 -T4 $*

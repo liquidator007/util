@@ -1,0 +1,12 @@
+#!/bin/bash
+#version recursiva y multicamino de mp3flac.m3u
+if [ $# -eq 0 ]
+then
+  printf "Uso:\n\t $0 ruta...\n\n"
+  exit 1
+fi
+
+for R in "$*"
+do
+  find "$R" -type d -exec /util/mp3flac.m3u {} \;
+done

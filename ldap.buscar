@@ -1,0 +1,12 @@
+if [ $# -eq 0 ]
+then
+  printf "\n\n\tUso: $0 dn...\n\n"
+  exit 1
+fi
+
+for F in $*
+do
+    cmd="ldapsearch −b '' '$F' -x"
+    echo CMD=$cmd
+    sh -c "$cmd"
+done

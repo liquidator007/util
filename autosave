@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+then
+  echo "Uso: autosave <segundos>"
+  exit 1
+fi
+while true
+do
+  sync; sync
+  sleep $1
+done

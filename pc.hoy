@@ -1,0 +1,3 @@
+#!/bin/bash
+
+/util/pc.activos $(date +%d) $(date +%b) '..:..:..' | /util/pc.ping

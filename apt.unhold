@@ -1,0 +1,7 @@
+#!/bin/bash
+
+for P in $*
+do
+  echo "$P install" | sudo dpkg --set-selections
+  sudo dpkg --get-selections | grep $P
+done

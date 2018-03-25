@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+then
+  printf  "Uso:\n\t$1\n\n"
+  exit 1
+fi
+ 
+echo realizando restauracion BD LDAP desde $1 ...
+echo contraseña servidor LDAP:
+ldapadd -Wx -D "cn=admin,dc=iescierva,dc=net" -H ldap://ldap.iescierva.net -f "$1"

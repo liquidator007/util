@@ -1,0 +1,54 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUsage:\n\t$0 { create | delete } [fstype] [vg] [extension] [snapsize] [LVs]\n\n"
+  exit 1
+fi
+
+OP=${1-create}
+FS=${2-xfs}
+VG=${3-"principal"}
+EXTENSION=${4-"-bacula"}
+SIZE=${5-"10G"}
+shift
+shift
+shift
+shift
+shift
+LVs=${*-"databases moodledata"}
+
+echo OP= $OP
+echo FS= $FS
+echo VG= $VG
+echo EXTENSION= $EXTENSION
+echo SIZE= $SIZE
+echo LVs= $LVs
+
+cd /
+
+if [ "create" == "$OP" ]
+then
+for LV in $LVs
+do
+  echo lvcreate --size $SIZE --snapshot --name "$LV$EXTENSION" "$VG/$LV" && \
+  lvcreate --size $SIZE --snapshot --name "$LV$EXTENSION" "$VG/$LV" && \
+  mkdir -p "/mnt/$LV$EXTENSION" && \
+  mount -t $FS -o nouuid "/dev/$VG/$LV$EXTENSION" "/mnt/$LV$EXTENSION"
+done
+exit 
+fi
+
+if [ "delete" == "$OP" ]
+then
+for LV in $LVs
+do
+  echo $LV
+  umount "/mnt/$LV$EXTENSION" && \
+  rmdir "/mnt/$LV$EXTENSION" && \
+  echo lvremove -f "$VG/$LV$EXTENSION" 
+  lvremove -f "$VG/$LV$EXTENSION" 
+done
+exit 
+fi
+

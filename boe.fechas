@@ -1,0 +1,32 @@
+#!/bin/bash
+#ajuste de las fechas de todos los archivos del BOE, para el buscador web
+
+PATH=$PATH:/util:/bin:/usr/bin
+
+C=`basename $0`
+
+if [ $# -ne 0 ]
+then
+  printf "\n\nUso:\n\t $C\n\n"
+  exit 1
+fi
+
+BOES=/var/spool/mirrors/www.boe.es/boe/dias
+
+
+cd $BOES
+for ANIO in ????
+do
+  if [ -d $BOES/$ANIO ]
+  then
+    cd $BOES/$ANIO
+    for B in ????-??-??	#para todos los BOEs...
+    do
+      cd $BOES/$ANIO/$B/pdfs	#Entramos en uno
+      T="$B 12:00pm"	#preparamos la fecha y hora a asignar
+      #la asignamos a la carpeta y su contenido
+      touch --date="$T" * . ..
+    done
+  fi
+done 
+

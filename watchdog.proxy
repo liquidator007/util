@@ -1,0 +1,30 @@
+#!/bin/bash
+
+TESTURL=http://genoma.unsam.edu.ar/images/gifs/cc3300.gif
+SLEEP_OK=100
+SLEEP_ERROR=10
+
+export proxy=http://localhost:3128
+export ftp_proxy=$proxy
+export http_proxy=$proxy
+export proxy_ftp=$proxy
+export proxy_http=$proxy
+
+cd /tmp
+
+while true
+do
+  wget $TESTURL
+  RETVAL=$?
+
+  if [ $RETVAL -ne 0 ]
+  then
+    echo Proxy error...
+    service squid3 reload
+    service dansguardian reload
+    sleep $SLEEP_ERROR
+  else
+    echo Proxy ok...
+    sleep $SLEEP_OK
+  fi
+done

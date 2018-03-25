@@ -1,0 +1,44 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+#Construir, la precompilada da referencias invalidas en ffmpeg
+#ejecutar "apt-get --yes install libx264-dev"
+#exit $?
+
+#BUILD
+echo Eliminando paquetes ffmpeg y x264 si estan instalados...
+ejecutar "apt-get --yes --purge remove x264 libx264-dev"
+
+#echo Actualizando lista de paquetes ***debes tener Universe y Multiverse***...
+
+echo Instalando herramientas necesarias para compilar...
+#ejecutar "apt-get --yes install build-essential subversion git-core checkinstall yasm texi2html libfaac-dev libfaad-dev libmp3lame-dev libopencore-amrnb-dev libopencore-amrwb-dev libsdl1.2-dev libx11-dev libxvidcore4-dev zlib1g-dev libogg-dev libgpac-dev"
+ejecutar "apt-get --yes install build-essential subversion git-core checkinstall yasm texi2html libfaac-dev libfaad-dev libmp3lame-dev libsdl1.2-dev libx11-dev libxvidcore4-dev zlib1g-dev libogg-dev libgpac-dev"
+
+echo Construyendo libx264 [git]
+cd $BUILDPATH 
+if [ -d x264 ]
+then
+  cd x264
+  git pull
+else
+  git clone git://git.videolan.org/x264.git 
+  cd x264 
+fi
+./configure  --prefix=/usr/local --enable-shared && \
+make && \
+#sudo checkinstall --pkgname=x264 --pkgversion "1:0.svn`date +%Y%m%d`" --backup=no --default
+sudo checkinstall --fstrans=no --install=yes --pakdir "$HOME/Desktop" \
+--maintainer "$USER" --pkgname=x264 --pkgversion "1:0.svn`date +%Y%m%d`-0.0ubuntu1" \
+--backup=no --deldoc=yes --deldesc=yes --delspec=yes --gzman --default && \
+make distclean && \
+
+#eliminar otras versiones de libx264-67 que interfieren. Ya tenemos la última, asi que no se necesitan.
+ejecutar "apt-get --yes remove libx264-67"

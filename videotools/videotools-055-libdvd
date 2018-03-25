@@ -1,0 +1,31 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+VERSION_LIBDVDNAV=4.1.3
+VERSION_LIBDVDREAD=4.1.3
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+echo Construyendo libdvdnav [wget]...
+cd $BUILDPATH
+wget --continue ftp://ftp.mplayerhq.hu/MPlayer/releases/dvdnav-old/libdvdnav-$VERSION_LIBDVDNAV.tar.bz2 && \
+tar jxvf libdvdnav-$VERSION_LIBDVDNAV.tar.bz2 && \
+cd libdvdnav-$VERSION_LIBDVDNAV && \
+./configure2 --prefix=/usr/local --enable-shared && \
+make && \
+sudo checkinstall --pkgname=libdvdnav --pkgversion "1:0.svn`date +%Y%m%d`" --backup=no --default && \
+make distclean
+
+echo Construyendo libdvdread [wget]...
+cd $BUILDPATH
+wget --continue ftp://ftp6.mplayerhq.hu/MPlayer/releases/dvdnav-old/libdvdread-$VERSION_LIBDVDREAD.tar.bz2 && \
+tar jxvf libdvdread-$VERSION_LIBDVDREAD.tar.bz2 && \
+cd libdvdread-$VERSION_LIBDVDREAD && \
+./configure2 --prefix=/usr/local --enable-shared && \
+make && \
+sudo checkinstall --pkgname=libdvdread --pkgversion "1:0.svn`date +%Y%m%d`" --backup=no --default && \
+make distclean

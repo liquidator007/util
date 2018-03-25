@@ -1,0 +1,26 @@
+#!/bin/bash
+
+#poner permisos de lectura en ficheros y carpetas de medios
+
+setmod()
+{
+echo fijando permisos en $1...
+find "$1" -type d -exec chmod 755 {} \;
+find "$1" -type f -exec chmod 755 {} \;
+chown -R mim.www-data "$1"
+}
+
+echo Explorando los siguientes ficheros de configuracion de mediatomb:
+ls -1 /etc/mediatomb/config*.xml
+echo
+
+echo detectadas las siguientes rutas: 
+cat /etc/mediatomb/config*.xml | grep "directory location" | sed 's/^.*<directory location\=//' | sed 's/mode\=.*$//' | sort | uniq 
+
+echo cambiando permisos...
+cat /etc/mediatomb/config*.xml | grep "directory location" | sed 's/^.*<directory location\=//' | sed 's/mode\=.*$//' | sort | uniq | xargs chmod -R 755
+echo
+
+echo cambiando propietario...
+cat /etc/mediatomb/config*.xml | grep "directory location" | sed 's/^.*<directory location\=//' | sed 's/mode\=.*$//' | sort | uniq | xargs chown -R mim.www-data
+echo

@@ -1,0 +1,3 @@
+#!/bin/sh
+#mplayer http://www.cadenaser.es/player/SER-TIC.asx
+xine http://www.cadenaser.es/player/SER-TIC.asx

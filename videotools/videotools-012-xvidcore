@@ -1,0 +1,24 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+VERSION=1.2.2
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+#BUILD
+echo Instalando herramientas necesarias para compilar...
+ejecutar "apt-get --yes install nasm"
+
+echo Construyendo xvidcore [wget]
+cd $BUILDPATH 
+wget --continue http://downloads.xvid.org/downloads/xvidcore-$VERSION.tar.gz && \
+tar xvfz xvidcore-$VERSION.tar.gz && \
+cd xvidcore/build/generic && \
+./configure --prefix=/usr/local && \
+make && \
+sudo checkinstall --pkgname=xvidcore --pkgversion "1:0.svn`date +%Y%m%d`" --backup=no --default && \
+make distclean 

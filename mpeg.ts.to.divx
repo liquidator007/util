@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\t$0 fichero...\n\n"
+  exit 1
+fi
+
+for F in $*
+do
+  mencoder -oac copy -ovc lavc -lavcopts vcodec=mpeg4 -o $F.avi $F
+done

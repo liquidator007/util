@@ -1,0 +1,226 @@
+#!/bin/sh
+#
+# rc.icmp	Advanced ICMP Filtering with iptables
+#
+# Version Hx:	$Id: rc.icmp,v 1.00 2003/01/28 09:04:10 david Exp $
+# 		$Id: rc.icmp,v 1.01 2013/09/07 16:59:38 david Exp $
+#
+
+################################################################
+#                                                              #
+# Internet Control Message Protocol (ICMP), documented in RFC  #
+# 792, is a required protocol tightly integrated with IP. ICMP #
+# messages, delivered in IP packets, are used for out-of-band  #
+# messages related to network operation or misoperation. Since #
+# ICMP relies on IP, packet delivery is unreliable (as         #
+# opposed to TCP).                                             #
+#                                                              #
+# ICMP functions typically include:                            #
+#   - Announce network errors                                  #
+#   - Announce network congestion (source quench)              #
+#   - Assist troubleshooting (ping)                            #
+#   - Announce timeouts (traceroute)                           # 
+#                                                              #
+# Be cautious; blocking ICMP can have unpredictable results.   #
+# You may find that your TCP/IP connectivity may break.        #
+#                                                              #
+# A good resource for ICMP filtering can be found at:          #
+# www.oregontechsupport.com/articles/ICMP_Scanning_v3.0.pdf    #
+#                                                              #
+# Netfilter (iptables) can implement the ICMP Extension by     #
+# name (e.g., "host unreachable"), numeric type (e.g., "3"),   #
+# or a numeric type and code separated by a "/" (e.g., "3/3"). #
+################################################################
+
+################################################################
+# ICMP echo-reply (type 0)                                     #
+#                                                              #
+# Ping scanning is typically used to determine which hosts on  #
+# a network are up. Typically this is done by sending ICMP     #
+# ECHO request packets to the target host.                     #
+################################################################
+iptables -A OUTPUT -p icmp --icmp-type 0 -j ACCEPT
+iptables -A INPUT -p icmp --icmp-type 0 -j ACCEPT
+iptables -A FORWARD -p icmp --icmp-type 0 -j ACCEPT
+
+################################################################
+# ICMP types 1-2 are unassigned                                #
+################################################################
+
+################################################################
+# ICMP destination-unreachable (type 3)                        #
+#                                                              #
+# Filtering "fragmentation-needed" traffic is a BAD idea.      #
+#                                                              #
+# Codes                                                        #
+#   0  network-unreachable                                     #
+#   1  host-unreachable                                        #
+#   2  protocol-unreachable                                    #
+#   3  port-unreachable                                        #
+#   4  fragmentation-needed                                    #
+#   5  source-route-failed                                     #
+#   6  network-unknown                                         #
+#   7  host-unknown                                            #
+#   8  Source Host Isolated                                    #
+#   9  network-prohibited                                      #
+#   10  host-prohibited                                        #
+#   11  TOS-network-unreachable                                #
+#   12  TOS-host-unreachable                                   #
+#   13  communication-prohibited [RFC1812]                     #
+#   14  host-precedence-violation [RFC1812]                    #
+#   15  precedence-cutoff [RFC1812]                            #
+################################################################
+
+iptables -A INPUT -p icmp --icmp-type 3/4 -j ACCEPT
+iptables -A OUTPUT -p icmp --icmp-type 3/4 -j ACCEPT
+iptables -A FORWARD -p icmp --icmp-type 3/4 -j ACCEPT
+
+iptables -A FORWARD -p icmp --icmp-type 3/3 -j ACCEPT
+iptables -A OUTPUT -p icmp --icmp-type 3/3 -j ACCEPT
+iptables -A INPUT -p icmp --icmp-type 3/3 -j ACCEPT
+
+iptables -A FORWARD -p icmp --icmp-type 3/1 -j ACCEPT
+iptables -A INPUT -p icmp --icmp-type 3/1 -j ACCEPT
+iptables -A OUTPUT -p icmp --icmp-type 3/1 -j ACCEPT
+
+################################################################
+# ICMP Source Quench (type 4)                                  #
+#                                                              #
+# This is detailed in RFC 792.  Filtering this type of         #
+# traffic is generally considered a BAD idea.                  #
+################################################################
+
+iptables -A INPUT -p icmp --icmp-type 4 -j ACCEPT
+iptables -A OUTPUT -p icmp --icmp-type 4 -j ACCEPT
+iptables -A FORWARD -p icmp --icmp-type 4 -j ACCEPT
+
+################################################################
+# ICMP Redirect (type 5)                                       #
+#                                                              #
+# Codes                                                        #
+#   0  Redirect Datagram for the Network (or subnet)           #
+#   1  Redirect Datagram for the Host                          #
+#   2  Redirect Datagram for the Type of Service and Network   #
+#   3  Redirect Datagram for the Type of Service and Host      #
+################################################################
+
+if [ -f /proc/sys/net/ipv4/conf/all/accept_redirects ]; then
+	echo "   Kernel ignores all ICMP redirects"
+	echo 0 > /proc/sys/net/ipv4/conf/all/accept_redirects
+fi
+
+################################################################
+# ICMP Alternate Host Address (type 6)                         #
+# ICMP Unassigned (type 7)                                     #
+################################################################
+
+################################################################
+# ICMP Echo Request (type 8)                                   #
+################################################################
+
+iptables -A INPUT -p icmp --icmp-type 8 -m limit --limit 2/s -j ACCEPT
+iptables -A INPUT -p icmp --icmp-type 8 -j LOG --log-prefix "ICMP/in/8 Excessive: "
+iptables -A INPUT -p icmp --icmp-type 8 -j DROP
+iptables -A OUTPUT -p icmp --icmp-type 8 -j ACCEPT
+iptables -A FORWARD -p icmp --icmp-type 8 -j ACCEPT
+
+if [ -f /proc/sys/net/ipv4/icmp_echo_ignore_all ]; then
+   echo "   Kernel answers ICMP Echo requests"
+   echo 0 > /proc/sys/net/ipv4/icmp_echo_ignore_all
+fi
+
+################################################################
+# Prevention: Smurf IP Denial-of-Service Attacks               #
+#                                                              #
+# See http://www.cert.org/advisories/CA-1998-01.html           #
+################################################################
+
+if [ -f /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts ]; then
+   echo "   Kernel ignores ICMP Echo requests sent to broadcast/multicast addresses"
+   echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+fi
+
+################################################################
+# ICMP Router Advertisement (type 9)                           #
+# ICMP Router Solicitation (type 10)                           #
+#                                                              #
+# These are described in RFC 1256.                             #
+################################################################
+
+################################################################
+# ICMP Time Exceeded (type 11)                                 #
+#                                                              #
+# Codes                                                        #
+#   0  Time to Live exceeded in Transit                        #
+#   1  Fragment Reassembly Time Exceeded                       #
+################################################################
+
+iptables -A INPUT -p icmp --icmp-type 11 -j ACCEPT
+iptables -A OUTPUT -p icmp --icmp-type 11 -j ACCEPT
+iptables -A FORWARD -p icmp --icmp-type 11 -j ACCEPT
+
+################################################################
+# ICMP Parameter Problem (type 12)                             #
+#                                                              #
+# Codes                                                        #
+#   0  Pointer indicates the error                             #
+#   1  Missing a Required Option [RFC1108]                     #
+#   2  Bad Length                                              # 
+################################################################
+
+iptables -A INPUT -p icmp --icmp-type 12 -j ACCEPT
+iptables -A OUTPUT -p icmp --icmp-type 12 -j ACCEPT
+iptables -A FORWARD -p icmp --icmp-type 12 -j ACCEPT
+
+################################################################
+# ICMP Timestamp (type 13)                                     #
+# ICMP Timestamp Reply (type 14)                               #
+# ICMP Information Request (type 15)                           #
+# ICMP Information Reply (type 16)                             #
+# ICMP Address Mask Request (type 17)                          #
+# ICMP Address Mask Reply (type 18)                            #
+# ICMP Reserved (types 19-29)                                  #
+# ICMP Traceroute (type 30)                                    #
+# ICMP Datagram Conversion Error (type 31)                     #
+################################################################
+
+################################################################
+# ICMP bogus error responses                                   #
+#                                                              #
+# Sometimes you will come across routers that send out invalid #
+# responses to broadcast frames. This is a violation of RFC    #
+# 1122, "Requirements for Internet Hosts -- Communication      #
+# Layers". As a result, these events are logged by the kernel. #
+# To avoid filling up your logfile with unnecessary clutter,   #
+# you can tell the kernel not to issue these warnings.         #
+################################################################
+
+if [ -f /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses ]; then
+   echo "   Kernel ignores bogus responses to broadcast frames"
+   echo 1 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
+fi
+
+################################################################
+# ICMP Catch-all                                               #
+#                                                              #
+# There are many more ICMP types than this, but most aren't    #
+# implemented in large-scale (yet).  We can safely say that    #
+# anything not specifically allowed above should be blocked.   #
+################################################################
+
+iptables -A INPUT -p icmp -m limit -j LOG --log-prefix "ICMP/IN: "
+iptables -A OUTPUT -p icmp -m limit -j LOG --log-prefix "ICMP/OUT: "
+iptables -A FORWARD -p icmp -m limit -j LOG --log-prefix "ICMP/FWD: "
+iptables -A INPUT -p icmp -j DROP
+iptables -A OUTPUT -p icmp -j DROP
+iptables -A FORWARD -p icmp -j DROP 
+
+################################################################
+# This document was lovingly handcrafted on a Dell Latitude    #
+# C400 laptop running Slackware Linux 8.1, in case anyone      #
+# asks.                                                        #
+################################################################
+
+# This work is licensed under a Creative 
+# Commons Attribution-Noncommercial-No Derivative Works 3.0 Unported License, 
+# available at http://creativecommons.org/licenses/by-nc-nd/3.0/

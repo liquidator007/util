@@ -1,0 +1,2 @@
+echo "Mostrar el UID y la información asociada"
+id $*

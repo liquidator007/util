@@ -1,0 +1,10 @@
+if [ $# -eq 0 ]
+then
+  echo Sevicios disponibles:
+  ls /etc/init.d
+  exit 1
+fi
+
+SCRIPT=$1
+shift
+/etc/init.d/$SCRIPT $*

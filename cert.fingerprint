@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso:\n\t$0 certificado...\n\n"
+  exit 1
+fi
+
+for C in $*
+do
+  openssl x509 -noout -fingerprint -in $C
+done

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ $# -eq 0 ]
+then
+  rpm -qa -last
+else
+  for P in $*
+  do
+    rpm -qa -last | grep $P
+    echo "Listado de ficheros:"
+    rpm -q --list $P
+  done
+fi

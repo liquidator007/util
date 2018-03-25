@@ -1,0 +1,10 @@
+if [ $1 -eq 0 ]
+then
+	echo 1
+else
+	let X=$1
+	let Y=X-1
+	let Z=`factorial $Y`
+	let X=X*Z
+	echo $X
+fi

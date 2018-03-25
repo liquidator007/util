@@ -1,0 +1,27 @@
+#!/bin/sh
+
+export PATH=/etc/rc.d/init.d:/bin:/sbin:/usr/bin:/usr/sbin:/util
+
+if [ $# -eq 0 ]
+then
+  printf "Uso:\n\t$0 dirección-ip[/mascara] ...\n\n"
+  exit 1
+fi
+
+for A in $*
+do  
+#logger user.info "Desactivando $A en el cortafuegos"
+ 
+#Borra reglas viejas
+ipchains -D input -i eth0 -s $A -p tcp -d 0.0.0.0/0 www -j REJECT 2>/dev/null
+ipchains -D input -i eth0 -s $A -p tcp -d 0.0.0.0/0 81 -j REJECT 2>/dev/null
+ipchains -D input -i eth0 -s $A -p tcp -d 0.0.0.0/0 3128 -j REJECT 2>/dev/null
+ipchains -D input -i eth0 -s $A -p tcp -d 0.0.0.0/0 ftp -j REJECT 2>/dev/null
+
+  #Desactivar los puertos de http
+  ipchains -I input 1 -i eth0 -s $A -p tcp -d 0.0.0.0/0 www -j REJECT
+  ipchains -I input 1 -i eth0 -s $A -p tcp -d 0.0.0.0/0 81 -j REJECT
+  ipchains -I input 1 -i eth0 -s $A -p tcp -d 0.0.0.0/0 3128 -j REJECT
+  #Desactivar los puertos de ftp
+  ipchains -I input 1 -i eth0 -s $A -p tcp -d 0.0.0.0/0 ftp -j REJECT
+done

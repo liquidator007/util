@@ -1,0 +1,2 @@
+#!/bin/bash
+ rsync -av --delete-after --size-only /media/BACKUPS/backup\ de\ WWW/var/biblioteca-e/ /var/biblioteca-e/

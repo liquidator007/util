@@ -1,0 +1,78 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+VERSION=all-20110131
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+echo Construyendo mplayer [svn]...
+apt-get --yes install debhelper em8300-headers gawk gettext html2text \
+intltool-debian ladspa-sdk libaa1-dev libasound2-dev libatk1.0-dev libaudio-dev \
+libaudio2 libaudiofile-dev libavahi-client-dev libavahi-common-dev libcaca-dev \
+libcairo2-dev libcdparanoia-dev libcelt0 libdbus-1-dev libdbus-glib-1-dev libdirectfb-dev \
+libdirectfb-extra libdts-dev libdv4-dev libenca-dev libenca0 libesd0-dev libexpat1-dev \
+libfaac-dev libfaac0 libffado0 libfontconfig1-dev libfreebob0 libfreetype6-dev \
+libfribidi-dev libggi-target-x libggi2 libggi2-dev libggimisc2 libggimisc2-dev \
+libgif-dev libgii1 libgii1-dev libgii1-target-x libgl1-mesa-dev libglib2.0-dev \
+libglu1-mesa-dev libgtk2.0-dev libice-dev libjack-dev libjack0 libjpeg62-dev \
+liblzo-dev liblzo1 liblzo2-2 liblzo2-dev libmad0-dev libmail-sendmail-perl \
+libmp3lame-dev libmp3lame0 libmpcdec-dev libmpcdec3 libncurses5-dev libogg-dev \
+libopenal-dev libopenal1 libpango1.0-dev libpixman-1-dev libpng12-dev libpopt-dev \
+libpthread-stubs0 libpthread-stubs0-dev libpulse-dev libpulse-mainloop-glib0 \
+libsdl1.2-dev libslang2-dev libsm-dev libsmbclient-dev libspeex-dev libsvga1 \
+libsvga1-dev libsys-hostname-long-perl libsysfs-dev libtheora-dev libtwolame-dev \
+libtwolame0 libvorbis-dev libx11-dev libxau-dev libschroedinger-dev libstdc++5  \
+libxcb-render-util0-dev libxcb-render0-dev libxcb1-dev libxcomposite-dev \
+libxcursor-dev libxdamage-dev libxdmcp-dev libxext-dev libxfixes-dev libxft-dev \
+libxi-dev libxinerama-dev libxml++2.6-2 libxrandr-dev libxrender-dev libxt-dev \
+libxv-dev libxvidcore4-dev libxvmc-dev libxxf86dga-dev libxxf86vm-dev mesa-common-dev \
+po-debconf sharutils x11proto-composite-dev x11proto-core-dev x11proto-damage-dev \
+x11proto-fixes-dev x11proto-input-dev x11proto-kb-dev x11proto-randr-dev \
+x11proto-render-dev x11proto-video-dev x11proto-xext-dev x11proto-xf86dga-dev \
+x11proto-xf86vidmode-dev x11proto-xinerama-dev xtrans-dev zlib1g-dev \
+liboil0.3-dev libcddb2-dev subversion
+
+#apt-get --yes remove libavutil49 libavformat52
+
+#CODEC PACK
+cd $BUILDPATH
+wget --continue http://www.mplayerhq.hu/MPlayer/releases/codecs/$VERSION.tar.bz2 && \
+mkdir -pv /usr/lib/codecs && \
+tar xjvf $VERSION.tar.bz2 && \
+cp -v $BUILDPATH/$VERSION/* /usr/lib/codecs
+
+#Font para subtitulos
+mkdir -v $HOME/.mplayer
+ln -sv /usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf ~/.mplayer/subfont.ttf
+
+#mplayer
+svn checkout svn://svn.mplayerhq.hu/mplayer/trunk mplayer
+cd $BUILDPATH/mplayer
+#rm -rf ffmpeg
+#ln -s ../ffmpeg 
+#cd ffmpeg
+#ln -s ../../ffmpeg/libavcodec/
+#ln -s ../../ffmpeg/libavcore/
+#ln -s ../../ffmpeg/libavutil/
+#ln -s ../../ffmpeg/libavformat/
+#ln -s ../../ffmpeg/libavfilter/
+#ln -s ../../ffmpeg/libpostproc/
+#cd $BUILDPATH/mplayer
+
+./configure --confdir=/etc/mplayer \
+	--disable-live \
+	--enable-mencoder
+
+make
+sudo checkinstall -D --install=yes --fstrans=no --pakdir "$HOME/Desktop" \
+	--provides "mplayer,mencoder" \
+	--pkgname mplayer --backup=no --deldoc=yes --deldesc=yes --delspec=yes --default \
+ 	--pkgversion "3:1.0~svn-`grep "#define VERSION" version.h | cut -d"-" -f2`"
+make distclean
+
+#GUI
+#sudo apt-get --yes install smplayer

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+if [ $# -ne 2 ]
+then
+  printf "\nUso:\n\t$0 cuefile flacfile\n\n"
+  exit 1
+fi 
+
+cue_file=$1
+aud_file=$2
+
+time[0]="00:00.00"
+c=1
+for ts in $(cuebreakpoints "${cue_file}"); do
+    time[${c}]=${ts}
+    c=$((c+1))
+done
+time[${c}]='-0'
+for ((i=0;i<$((${#time[@]}-1));i++)); do
+    trackno=$(($i+1))
+    TRACKNUMBER="$(printf %02d ${trackno})"
+    title="$(cueprint --track-number ${trackno} -t '%t' "${cue_file}")"
+    flac --silent --exhaustive-model-search --skip=${time[$i]} --until=${time[$(($i+1))]} --tag=ARTIST="${ARTIST}" --tag=ALBUM="${ALBUM}" --tag=DATE="${DATE}" --tag=TITLE="${title}" --tag=TRACKNUMBER="${TRACKNUMBER}" "${aud_file}" --output-name="${TRACKNUMBER}-${title}.flac"
+done

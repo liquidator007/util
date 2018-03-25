@@ -1,0 +1,10 @@
+#!/bin/bash
+
+R="soundconverter"
+
+if [ ! -x "$R" ]
+then
+  sudo apt-get install --yes soundconverter
+fi
+
+"$R"

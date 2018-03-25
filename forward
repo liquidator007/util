@@ -1,0 +1,18 @@
+#!/bin/sh
+if [ $# -ne 1 ]
+then
+	printf "\nUso:\n\t$0 [ on | off ]\n" 
+	echo "Estado de forward: " `cat /proc/sys/net/ipv4/ip_forward`
+	exit 1
+fi
+
+if [ $1 == "on" ]
+then
+	echo 1 > /proc/sys/net/ipv4/ip_forward
+elif [ $1 == "off" ]
+then
+	echo 0 > /proc/sys/net/ipv4/ip_forward
+else
+	echo "Error"
+	exit 1
+fi

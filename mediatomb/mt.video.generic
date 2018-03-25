@@ -1,0 +1,17 @@
+#!/bin/bash
+INPUT="$1"
+OUTPUT="$2"
+VIDEO_CODEC="mpeg2video"
+VIDEO_BITRATE="4096k"
+AUDIO_CODEC="mp2"
+AUDIO_BITRATE="192k"
+AUDIO_SAMPLERATE="48000"
+AUDIO_CHANNELS="2"
+FORMAT="dvd"
+#SIZE="-s 720x576"
+FPS="-r 25"
+
+#compilación local de ffmpeg
+/usr/local/bin/ffmpeg -threads 2 -i "${INPUT}" -vcodec ${VIDEO_CODEC} -b ${VIDEO_BITRATE} \
+-acodec ${AUDIO_CODEC} -ab ${AUDIO_BITRATE} -ar ${AUDIO_SAMPLERATE} -ac ${AUDIO_CHANNELS} $SIZE $FPS \
+-f ${FORMAT} - > "${OUTPUT}" 

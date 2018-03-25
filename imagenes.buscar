@@ -1,0 +1,11 @@
+#!/bin/bash
+
+for R in "$*"
+do
+  cd "$R"
+  pwd
+  find . -regex '.*\.[gG][iI][fF]$' -o \
+         -regex '.*\.[jJ][pP][eE]?[gG]$' -o \
+         -regex '.*\.[pP][iI][cC]$' -o \
+         -regex '.*\.[bB][mM][pP]'
+done

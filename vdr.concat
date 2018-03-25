@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo uniendo $1...
+
+find $1 -type d -exec 'cat {}/???.vdr >> {}/video.ts' \;

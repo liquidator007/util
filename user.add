@@ -1,0 +1,36 @@
+#!/bin/sh
+if [ $# -lt 2 -o $# -gt 3 ]
+then
+  printf "Uso:\n\t$0 grupo usuario [uid]\n\n"
+  exit 1
+fi
+
+PATH=/util:$PATH
+GRUPOS="disk,cdrom,floppy,audio,video,plugdev,scanner"
+
+#pwconv	#Crear /etc/shadow con la informacion de claves de /etc/passwd
+group.add $1 2>&1 >/dev/null
+#mkdir /home/$2
+useradd --uid $3 -g $1 -G $GRUPOS -m -d /home/$2 -s /bin/bash $2
+
+#if [ $? -ne 0 ] #hubo error
+#then
+#  exit 1
+#fi
+
+#echo "Introducir la clave de acceso:"
+(sleep 1;echo $2;sleep 1;echo $2) | passwd $2
+
+chown -R $2.$1 /home/$2
+
+#cd /var/yp	#Anadir la nueva cuenta a la B.D. NIS/YP
+#if [ $? -ne 0 ] #hubo error
+#then
+#  echo "parece que NIS/YP no está instalado" >&2
+#  exit 1
+#else
+#  echo "actualizando informacion NIS/YP..."
+#  make
+#  echo "Informacion NIS/YP del usuario anadido:"
+#  ypcat passwd | grep $2
+#fi

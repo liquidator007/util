@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#git               git-core          gitg              gitosis
+#git-arch          git-cvs           git-gui           gitpkg
+#git-buildpackage  git-daemon-run    gitk              gitstats
+#git-cola          git-doc           git-load-dirs     git-svn
+#git-completion    git-email         gitmagic          gitweb
+
+apt-get --yes update
+apt-get --yes install git-core git-doc git-gui git-svn gitweb git-cvs

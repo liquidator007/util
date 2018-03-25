@@ -1,0 +1,20 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+echo limpiando paquetes que ya no se utilizan...
+ejecutar "apt-get --yes autoremove"
+
+echo reinstalando paquetes eliminados por ciertas incompatibilidades con paquetes -dev...
+#ejecutar "apt-get --yes --force-yes install firefox xine-ui libxine1-all-plugins libxine1-ffmpeg libxine1-gnome totem-xine"
+ejecutar "apt-get --yes --force-yes install firefox"
+ejecutar "apt-get --yes --force-yes remove libavcodec52"
+
+#Sin esto no funcionará XVID en xine, kaffeine y totem
+#ejecutar "apt-get --yes --force-yes --reinstall install libavutil49"

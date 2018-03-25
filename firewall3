@@ -1,0 +1,962 @@
+#!/bin/bash
+#
+# chkconfig: - 80 20
+# description: firewall
+# Activa y desactiva funciones de cortafuegos y enrutado. Ficheros de configuracion en /etc/firewall 
+# probe:true
+
+#NOTA: este fichero deberia estar en /etc/init.d y ser activado con update-rc.d
+#NOTA: en /tmp/firewall-v3.sh se genera una salida con los comandos ejecutados por el cortafuegos
+
+SAVE=/var/lib/firewall/firewall.save
+CONFDIR=/etc/firewall3
+OUTPUT=/tmp/firewall-v3.sh
+NULL=null
+
+clear
+
+
+. $CONFDIR/config
+
+IPS()
+{
+  if [ ! -z "$1" ]		#not empty
+  then
+  R=""
+  for P in $*
+  do
+    grep -q '^[0-9. /]*$' <<!
+      $P
+!
+    if [ $? -eq 0 ]
+    then
+      #es una IP/mask
+      R="${R} $P"
+    else
+      #es un nombre de dominio
+      #IMPORTANTE: En este punto el script debe tener el cortafuegos abierto para consultar DNS
+      DIG=`dig $P +short |  grep -Eo '^[[:digit:]]{1,3}.[[:digit:]]{1,3}.[[:digit:]]{1,3}.[[:digit:]]{1,3}$'`
+ 	echo $DIG >> /tmp/test
+      R="$R $DIG"
+      echo $R >> /tmp/test
+    fi
+  done
+    echo $R
+  else
+    echo "null"
+  fi
+}
+
+exec_iptables()
+{
+  CMD="iptables $*"
+  printf "$CMD" >> $OUTPUT 2>&1
+  sh -c "$CMD"
+  RET=$?
+  if [ $RET -ne 0 ]
+  then
+    echo " #RETCODE=$RET" >> $OUTPUT
+  else
+    echo >> $OUTPUT
+  fi
+}
+
+execute()
+{
+  CMD="$*"
+  echo $CMD >> $OUTPUT 2>&1
+  sh -c "$CMD"
+}
+
+vaciar()
+{
+#Vaciado de cadenas
+for i in `cat /proc/net/ip_tables_names`
+do
+  $I -F -t $i
+  $I -X -t $i
+  $I -Z -t $i
+done
+}
+
+vaciarhalf()
+{
+#Vaciado de cadenas
+for i in mangle filter
+do
+  $I -F -t $i
+  $I -X -t $i
+  $I -Z -t $i
+done
+}
+
+
+from_wan()
+{
+if [ -n "$CHAINLOG" ]
+then 
+  $I -I $1 -j LOG --log-level info --log-prefix "iptables_debug:$1:"
+fi
+if [ -f "$CONFDIR/$1" -a -r "$CONFDIR/$1" ]
+then 
+echo Procesando $1...
+while read P
+do
+  P=${P%%#*}	#Borrar comentarios
+  if [ ! -z "$P" ]
+  then
+  PROTO=`echo $P | cut -d';' -f1`
+  PUERTO=`echo $P | cut -d';' -f2`
+  IP_DST=`echo $P | cut -d';' -f3`
+  PUERTO_DST=`echo $P | cut -d';' -f4`
+  IP_ORIGEN=`echo $P | cut -d';' -f5`
+  JMP=`echo $P | cut -d';' -f6`
+  CONNLIMIT=`echo $P | cut -d';' -f7`
+  if [ ! -z $IP_ORIGEN ]
+  then
+     IP_ORIGEN="-s $IP_ORIGEN"
+  fi
+  if [ ! -z $IP_DST ]
+  then
+     IP_DST_C="-d $IP_DST"
+  else
+     IP_DST_C=""
+  fi
+  if [ ! -z "$PUERTO" ]
+  then
+ #    PUERTO="--match multiport --dports $PUERTO"		#MANDA HUEVOS: Asi no funciona con camaras de vigilancia (6100/tcp)
+     PUERTO="--dport $PUERTO"
+  fi
+  if [ ! -z "$PUERTO_DST" ]
+  then
+ #    PUERTO_DST_C="--match multiport --dports $PUERTO_DST"	#MANDA HUEVOS: Asi no funciona con camaras de vigilancia (6100/tcp)
+     PUERTO_DST_C="--dport $PUERTO_DST"
+  else
+     PUERTO_DST_C=""
+  fi
+  if [ ! -z "$JMP" ]
+  then
+     JMP="-j $JMP"
+  else
+     JMP="-j ACCEPT"
+  fi
+  if [ ! -z $CONNLIMIT ]
+  then
+     CONNLIMIT="-m connlimit --connlimit-above $CONNLIMIT"
+  fi
+  iLen=${#IF_WAN[@]}
+  for (( i=0; i<${iLen}; i++ ));
+  do
+    if [ "$JMP" == '-j ACCEPT' -a ! -z "$IP_DST" -a ! -z "$PUERTO_DST" ]
+    then
+      $I -t nat -A PREROUTING -p $PROTO -i ${IF_WAN[$i]} $IP_ORIGEN -d ${IP_WAN[$i]} $PUERTO -j DNAT --to-destination $IP_DST:$PUERTO_DST 
+    fi
+    ###EXPERIMENTAL: importante porque despues de PREROUTING(nat) viene FORWARD (filter), y si no esta bien los paquetes no pasaran...
+    $I -A $1 -p $PROTO $PUERTO_DST_C -i ${IF_WAN[$i]} $IP_ORIGEN $IP_DST_C $CONNLIMIT $JMP
+    ### ...o alternativamente, INPUT
+    $I -A wan_to_fw -p $PROTO -i ${IF_WAN[$i]} $IP_ORIGEN $IP_DST_C $PUERTO_DST_C $CONNLIMIT $JMP
+  done
+  fi
+done < "$CONFDIR/$1"
+else
+echo NO encontrado: $1
+fi
+}
+
+to_fw()
+{
+if [ -n "$CHAINLOG" ]
+then 
+  $I -I $1 -j LOG --log-level info --log-prefix "iptables_debug:$1:"
+fi
+if [ -f "$CONFDIR/$1" -a -r "$CONFDIR/$1" ]
+then 
+echo Procesando $1...
+while read P
+do
+  P=${P%%#*}	#Borrar comentarios
+  if [ ! -z "$P" ]
+  then
+  PROTO=`echo $P | cut -d';' -f1`
+  PUERTOO=`echo $P | cut -d';' -f2`
+  PUERTOD=`echo $P | cut -d';' -f3`
+  if [ ! -z $PROTO ]
+  then
+     PROTO="-p $PROTO"
+  fi
+  if [ ! -z $PUERTOO ]
+  then
+     PUERTOO="--match multiport --sports $PUERTOO"
+  fi
+  if [ ! -z $PUERTOD ]
+  then
+     PUERTOD="--match multiport --dports $PUERTOD"
+  fi
+  SRC=`echo $P | cut -d';' -f4`
+  DST=`echo $P | cut -d';' -f5`
+  JMP=`echo $P | cut -d';' -f6`
+  CONNLIMIT=`echo $P | cut -d';' -f7`
+  SRCS=`IPS $SRC`
+  DSTS=`IPS $DST`
+  if [ ! -z "$JMP" ]
+  then
+     JMP="-j $JMP"
+  else
+     JMP="-j ACCEPT"
+  fi
+  if [ ! -z $CONNLIMIT ]
+  then
+     CONNLIMIT="-m connlimit --connlimit-above $CONNLIMIT"
+  fi
+  for S in $SRCS
+  do
+  for D in $DSTS
+  do
+  if [ "$S" != "null" ]
+  then
+     SRC="-s $S"
+  else
+     SRC=""
+  fi
+  if [ "$D" != "null" ]
+  then
+     DST="-d $D"
+  else
+     DST=""
+  fi
+  $I -A $1 $PROTO $PUERTOO $PUERTOD $CONNLIMIT $SRC $DST $JMP
+  done
+  done
+  fi
+done < "$CONFDIR/$1"
+else
+echo NO encontrado: $1
+fi
+}
+
+from_lan()
+{
+if [ -n "$CHAINLOG" ]
+then 
+  $I -I $1 -j LOG --log-level info --log-prefix "iptables_debug:$1:"
+fi
+if [ -f "$CONFDIR/$1" -a -r "$CONFDIR/$1" ]
+then 
+echo Procesando $1...
+while read P
+do
+  P=${P%%#*}	#Borrar comentarios
+  if [ ! -z "$P" ]
+  then
+  PROTO=`echo $P | cut -d';' -f1`
+  PUERTOO=`echo $P | cut -d';' -f2`
+  PUERTOD=`echo $P | cut -d';' -f3`
+  if [ ! -z $PROTO ]
+  then
+     PROTO="-p $PROTO"
+  fi
+  if [ ! -z $PUERTOO ]
+  then
+     PUERTOO="--match multiport --sports $PUERTOO"
+  fi
+  if [ ! -z $PUERTOD ]
+  then
+     PUERTOD="--match multiport --dports $PUERTOD"
+  fi
+  SRC=`echo $P | cut -d';' -f4`
+  DST=`echo $P | cut -d';' -f5`
+  JMP=`echo $P | cut -d';' -f6`
+  CONNLIMIT=`echo $P | cut -d';' -f7`
+  if [ ! -z "$JMP" ]
+  then
+     JMP="-j $JMP"
+  else
+     JMP="-j ACCEPT"
+  fi
+  if [ ! -z $CONNLIMIT ]
+  then
+     CONNLIMIT="-m connlimit --connlimit-above $CONNLIMIT"
+  fi
+  SRCS=`IPS $SRC`
+  DSTS=`IPS $DST`
+  for S in $SRCS
+  do
+  for D in $DSTS
+  do
+  if [ "$S" != "null" ]
+  then
+     SRC="-s $S"
+  else
+     SRC=""
+  fi
+  if [ "$D" != "null" ]
+  then
+     DST="-d $D"
+  else
+     DST=""
+  fi  
+  $I -A $1 $PROTO $PUERTOO $PUERTOD $CONNLIMIT $SRC $DST $JMP
+  done
+  done
+  fi
+done < "$CONFDIR/$1"
+else
+echo NO encontrado: $1
+fi
+}
+
+
+start()
+{
+echo "Los comandos que se vayan a ejecutar se salvaran en el fichero $OUTPUT"
+echo \#`date` > $OUTPUT
+# Desactivar reenvio provisionalmente
+execute "echo 0 > /proc/sys/net/ipv4/ip_forward"
+
+#CARGA DE MODULOS - IMPORTANTE
+execute "modprobe ip_conntrack"
+execute "modprobe ip_conntrack_ftp"
+execute "modprobe nf_nat_proto_gre"
+execute "modprobe nf_conntrack_proto_gre"
+execute "modprobe nf_conntrack_pptp"
+execute "modprobe nf_nat_pptp"
+
+vaciar
+
+#Politicas por defecto aconsejables
+
+$I -P INPUT $DEFAULT_POLICY
+$I -P FORWARD $DEFAULT_POLICY
+$I -P OUTPUT $DEFAULT_POLICY
+
+$I -t nat -P PREROUTING ACCEPT
+$I -t nat -P POSTROUTING ACCEPT
+$I -t nat -P OUTPUT ACCEPT
+
+$I -t mangle -P PREROUTING ACCEPT
+$I -t mangle -P POSTROUTING ACCEPT
+$I -t mangle -P OUTPUT ACCEPT
+$I -t mangle -P INPUT ACCEPT
+$I -t mangle -P FORWARD ACCEPT
+
+#Creacion de nuevas cadenas
+$I -N lan_to_fw		#del segmento lan (red privada) a este firewall
+$I -N wan_to_fw		#del segmento wan (red publica) a este firewall
+$I -N dmz_to_fw		#del segmento dmz (desmilitarizado) a este firewall
+
+$I -N fw_to_lan		#de esta maquina al segmento lan
+$I -N fw_to_wan		#de esta maquina al segmento wan
+$I -N fw_to_dmz		#de esta maquina al segmento dmz
+
+$I -N lan_to_wan	#del segmento lan al segmento wan
+$I -N lan_to_dmz	#del segmento lan al segmento dmz
+$I -N wan_to_lan	#del segmento wan al segmento lan
+$I -N wan_to_dmz	#del segmento wan al segmento dmz
+$I -N dmz_to_wan	#del segmento dmz al segmento wan
+$I -N dmz_to_lan	#del segmento dmz al segmento lan
+$I -N lan_to_lan	#intra lan
+$I -N dmz_to_dmz	#intra dmz
+
+$I -N synflood	
+$I -N pingdeath
+$I -N portscan
+$I -N newnotsyn
+if [ -n "$DROPLOG" ]
+then
+  $I -N droplog
+fi
+
+######################################################################
+#POR OPTIMIZACION; la regla STABLISHED, RELATED sera siempre la primera regla de la cadena
+######################################################################
+$I -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+$I -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+$I -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+#ABRIR DNS TEMPORAL $$$ (BORRAR TRAS PROBAR)
+$I -A INPUT -p udp --dport 53 -j ACCEPT
+$I -A OUTPUT -p udp --dport 53 -j ACCEPT
+$I -A FORWARD -p udp --dport 53 -j ACCEPT
+$I -A INPUT -p udp --sport 53 -j ACCEPT
+$I -A OUTPUT -p udp --sport 53 -j ACCEPT
+$I -A FORWARD -p udp --sport 53 -j ACCEPT
+
+#Traffic Shaping
+execute "wondershaper $IF_WAN $KBITSEC_DOWN $KBITSEC_UP"
+ 
+######################################################################
+# Reglas generales
+######################################################################
+
+#Flags incorrectos, posible ataque
+$I -A INPUT -p tcp --tcp-flags ALL NONE -j $RECHAZO
+$I -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j $RECHAZO
+$I -A INPUT -p tcp --tcp-flags SYN,RST SYN,RST -j $RECHAZO
+$I -A INPUT -p tcp --tcp-flags FIN,RST FIN,RST -j $RECHAZO
+$I -A INPUT -p tcp --tcp-flags ACK,FIN FIN -j $RECHAZO
+$I -A INPUT -p tcp --tcp-flags ACK,PSH PSH -j $RECHAZO
+$I -A INPUT -p tcp --tcp-flags ACK,URG URG -j $RECHAZO
+
+#Flags incorrectos, posible ataque
+$I -A FORWARD -p tcp --tcp-flags ALL NONE -j $RECHAZO
+$I -A FORWARD -p tcp --tcp-flags SYN,FIN SYN,FIN -j $RECHAZO
+$I -A FORWARD -p tcp --tcp-flags SYN,RST SYN,RST -j $RECHAZO
+$I -A FORWARD -p tcp --tcp-flags FIN,RST FIN,RST -j $RECHAZO
+$I -A FORWARD -p tcp --tcp-flags ACK,FIN FIN -j $RECHAZO
+$I -A FORWARD -p tcp --tcp-flags ACK,PSH PSH -j $RECHAZO
+$I -A FORWARD -p tcp --tcp-flags ACK,URG URG -j $RECHAZO
+
+#
+#Ataques DoS (unidades: /second, /minute, /hour o /day, o abreviaturas)
+#
+
+#anti inundacion syn (syn-flood)
+$I -I INPUT 1 -p tcp --tcp-flags SYN,RST,ACK SYN  -j synflood
+$I -I FORWARD 1 -p tcp --tcp-flags SYN,RST,ACK SYN  -j synflood
+$I -A synflood -m limit --limit 128/s --limit-burst 256 -j RETURN
+$I -A synflood -j LOG --log-level info --log-prefix "iptables:synflood:"
+$I -A synflood -j DROP
+
+#anti ping de la muerte (ping of death)
+$I -I INPUT 1 -p icmp --icmp-type echo-request -j pingdeath
+$I -I FORWARD 1 -p icmp --icmp-type echo-request -j pingdeath
+
+$I -A pingdeath	-m limit --limit 128/s --limit-burst 256 -j RETURN
+$I -A pingdeath -j LOG --log-level info --log-prefix "iptables:pingdeath:"
+$I -A pingdeath -j DROP
+
+#anti busqueda furtiva de puertos (port scanner)
+$I -I INPUT 1 -p tcp --tcp-flags SYN,ACK,FIN,RST RST -j portscan
+$I -I FORWARD 1 -p tcp --tcp-flags SYN,ACK,FIN,RST RST -j portscan
+
+$I -A portscan -m limit --limit 128/s --limit-burst 256 -j RETURN
+$I -A portscan -j LOG --log-level info --log-prefix "iptables:portscan:"
+$I -A portscan -j DROP
+
+#Controles MAC ADDR
+#$I -A FORWARD -p tcp -m mac --mac-source 00:11:22:33:44:55 -j ACCEPT
+
+#Descartar paquetes de inicio de sesion que no sean SYN, y registrar
+$I -A INPUT -p tcp ! --syn -m state --state NEW -j newnotsyn
+$I -A FORWARD -p tcp ! --syn -m state --state NEW -j newnotsyn
+$I -A newnotsyn -j LOG --log-level info --log-prefix "iptables:Nuevo_no_syn:"
+#$I -A newnotsyn -j DROP
+$I -A newnotsyn -j RETURN
+
+################################################################
+# ICMP destination-unreachable (type 3)                        #
+#                                                              #
+# Filtering "fragmentation-needed" traffic is a BAD idea.      #
+#                                                              #
+# Codes                                                        #
+#   0  network-unreachable                                     #
+#   1  host-unreachable                                        #
+#   2  protocol-unreachable                                    #
+#   3  port-unreachable                                        #
+#   4  fragmentation-needed                                    #
+#   5  source-route-failed                                     #
+#   6  network-unknown                                         #
+#   7  host-unknown                                            #
+#   8  Source Host Isolated                                    #
+#   9  network-prohibited                                      #
+#   10  host-prohibited                                        #
+#   11  TOS-network-unreachable                                #
+#   12  TOS-host-unreachable                                   #
+#   13  communication-prohibited [RFC1812]                     #
+#   14  host-precedence-violation [RFC1812]                    #
+#   15  precedence-cutoff [RFC1812]                            #
+################################################################
+
+$I -A INPUT -p icmp --icmp-type 3/4 -j ACCEPT
+$I -A OUTPUT -p icmp --icmp-type 3/4 -j ACCEPT
+$I -A FORWARD -p icmp --icmp-type 3/4 -j ACCEPT
+
+$I -A FORWARD -p icmp --icmp-type 3/3 -j ACCEPT
+$I -A OUTPUT -p icmp --icmp-type 3/3 -j ACCEPT
+$I -A INPUT -p icmp --icmp-type 3/3 -j ACCEPT
+
+$I -A FORWARD -p icmp --icmp-type 3/1 -j ACCEPT
+$I -A INPUT -p icmp --icmp-type 3/1 -j ACCEPT
+$I -A OUTPUT -p icmp --icmp-type 3/1 -j ACCEPT
+
+################################################################
+# ICMP Source Quench (type 4)                                  #
+#                                                              #
+# This is detailed in RFC 792.  Filtering this type of         #
+# traffic is generally considered a BAD idea.                  #
+################################################################
+
+$I -A INPUT -p icmp --icmp-type 4 -j ACCEPT
+$I -A OUTPUT -p icmp --icmp-type 4 -j ACCEPT
+$I -A FORWARD -p icmp --icmp-type 4 -j ACCEPT
+printf "LAN: "
+lLen=${#IF_LAN[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${IF_LAN[$i]}=${IP_LAN[$i]} "
+done
+printf "\n"
+
+printf "DMZ: "
+lLen=${#IF_DMZ[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${IF_DMZ[$i]}=${IP_DMZ[$i]} "
+done
+printf "\n"
+
+printf "WAN: "
+lLen=${#IF_WAN[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${IF_WAN[$i]}=${IP_WAN[$i]} "
+done
+printf "\n\n"
+
+######################################################################
+#Abrir consultas DNS. Necesario para permitir reglas por nombre DNS 
+######################################################################
+printf "abriendo consultas a DNS en /etc/resolv.conf=[ "
+for H in `cat /etc/resolv.conf | sed "s/nameserver[ \t]*//" | grep -Eo '^[1-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$' | tr '\n' ' '`
+do
+  printf "${H}; "
+  $I -A OUTPUT -p udp --dport 53 -d $H -j ACCEPT
+  $I -A OUTPUT -p tcp --dport 53 -d $H -j ACCEPT
+  $I -A INPUT -p udp --dport 53 -s $H -j ACCEPT
+  $I -A INPUT -p tcp --dport 53 -s $H -j ACCEPT
+done
+printf "]\n"
+
+printf "abriendo paso a DNS_INTRANET=[ "
+iLen=${#DNS_INTRANET[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  printf "${DNS_INTRANET[$i]}; "
+  $I -A FORWARD -p udp --dport 53 -s ${DNS_INTRANET[$i]} -j ACCEPT
+  $I -A FORWARD -p tcp --dport 53 -s ${DNS_INTRANET[$i]} -j ACCEPT
+done
+printf "]\n"
+
+
+######################################################################
+#Aceptar sistemas de trafico abierto
+######################################################################
+
+printf "\nSistemas Abiertos=[ "
+lLen=${#ABIERTO[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${ABIERTO[$i]}; "
+  $I -A INPUT -s ${ABIERTO[$i]} -j ACCEPT
+  $I -A OUTPUT -d ${ABIERTO[$i]} -j ACCEPT
+  $I -A FORWARD -s ${ABIERTO[$i]} -j ACCEPT
+  $I -A FORWARD -d ${ABIERTO[$i]} -j ACCEPT
+done
+printf "]\n"
+
+######################################################################
+#Bloquear sistemas de trafico cerrado
+######################################################################
+
+printf "\nSistemas Cerrados=[ "
+lLen=${#CERRADO[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${CERRADO[$i]}; "
+  $I -A INPUT -s ${CERRADO[$i]} -j $RECHAZO
+  $I -A OUTPUT -d ${CERRADO[$i]} -j $RECHAZO
+  $I -A FORWARD -s ${CERRADO[$i]} -j $RECHAZO
+  $I -A FORWARD -d ${CERRADO[$i]} -j $RECHAZO
+done
+printf "]\n"
+
+######################################################################
+# Salidas hacia el segmento lan desde firewall
+######################################################################
+if [ -n "$CHAINLOG" ]
+then 
+  $I -I fw_to_lan -j LOG --log-level info --log-prefix "iptables_debug:fw_to_lan:"
+fi
+$I -A fw_to_lan -j ACCEPT
+
+######################################################################
+# Salidas hacia el segmento wan desde firewall
+######################################################################
+if [ -n "$CHAINLOG" ]
+then 
+  $I -I fw_to_wan -j LOG --log-level info --log-prefix "iptables_debug:fw_to_wan:"
+fi
+$I -A fw_to_wan -j ACCEPT
+
+######################################################################
+# Salidas hacia el segmento dmz desde firewall
+######################################################################
+if [ -n "$CHAINLOG" ]
+then 
+  $I -I fw_to_dmz -j LOG --log-level info --log-prefix "iptables_debug:fw_to_dmz:"
+fi
+$I -A fw_to_dmz -j ACCEPT
+
+
+######################################################################
+# NAT
+######################################################################
+#Destinos: ACCEPT, DROP, QUEUE, RETURN
+
+if [ -n "$NAT" ]
+then
+  iLen=${#IF_WAN[@]}
+  for (( i=0; i<${iLen}; i++ ));
+  do
+    $I -t nat -A POSTROUTING -o ${IF_WAN[$i]} -j MASQUERADE
+  done
+fi
+
+
+######################################################################
+# Proxy transparente HTTP (squid)
+######################################################################
+#Técnica:
+# 1) marcado de los paquetes con destino a puertos 80,443 no procedentes de maquinas con derecho a acceso directo a dicho puerto
+# 2) reenvio a proxy mediante policy routing
+# 3) reenvio interno de puertos en el proxy (en el proxy)
+
+#Proxy transparente HTTP (squid)
+if [ ! -z "$TRANSPARENT_MARK" -a ! -z "$TRANSPARENT_TABLE" -a ! -z "$SQUID_BOX" ]
+then
+echo
+echo Proxy transparente: $SQUID_BOX via $SQUID_BOX_IF...
+#Fase 1)
+printf "Puertos capturados a proxy transparente=[ "
+iLen=${#SQUID_BOX_CAPTURE_PORTS[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  printf "${SQUID_BOX_CAPTURE_PORTS[$i]} "
+  qLen=${#IF_LAN[@]}
+  for (( j=0; j<${qLen}; j++ ));
+  do
+    #este viene de un proxy, le dejamos pasar
+    $I -t mangle -A PREROUTING -p tcp -i ${IF_LAN[$j]} -s ${SQUID_BOX} --dport ${SQUID_BOX_CAPTURE_PORTS[$i]} -j ACCEPT
+  done
+done
+printf "]\n\n"
+printf "NO proxy transparente=[ "
+iLen=${#NO_TRANSPARENT[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  printf "${NO_TRANSPARENT[$i]}; "
+  #este se acepta sin hacer nada, es de uno permitido
+  qLen=${#IF_LAN[@]}
+  for (( j=0; j<${qLen}; j++ ));
+  do
+    $I -t mangle -A PREROUTING -p tcp -i ${IF_LAN[$j]} -s ${NO_TRANSPARENT[$i]} -j ACCEPT
+  done
+done
+printf "]\n\n"
+#resto de maquinas intentando salir directamente:
+printf "SI proxy transparente=[ "
+jLen=${#IF_LAN[@]}
+for (( j=0; j<${jLen}; j++ ));
+do
+  kLen=${#TRANSPARENT_NETS[@]}
+  for (( k=0; k<${kLen}; k++ ));
+  do
+  printf "${TRANSPARENT_NETS[$k]}(${IF_LAN[$j]}); "
+  iLen=${#SQUID_BOX_CAPTURE_PORTS[@]}
+  for (( i=0; i<${iLen}; i++ ));
+    do
+      $I -t mangle -A PREROUTING -p tcp -s ${TRANSPARENT_NETS[$k]} -i ${IF_LAN[$j]} --dport ${SQUID_BOX_CAPTURE_PORTS[$i]} -j MARK --set-mark $TRANSPARENT_MARK
+    done
+  done
+done
+printf "]\n\n"
+
+#Fase 2)
+execute "ip rule add fwmark $TRANSPARENT_MARK table $TRANSPARENT_TABLE"
+execute "ip route add default via $SQUID_BOX dev $SQUID_BOX_IF table $TRANSPARENT_TABLE"
+fi
+
+
+
+######################################################################
+#Aceptar todo el trafico desde/hacia interfaz local
+######################################################################
+$I -A INPUT -i $IF_LOC -j ACCEPT
+$I -A OUTPUT -o $IF_LOC -j ACCEPT
+
+######################################################################
+#Protocolos permitidos en todo caso
+######################################################################
+if [ -f $CONFDIR/proto -a -r $CONFDIR/proto ]
+then 
+while read P
+do
+  P=${P%%#*}	#Borrar comentarios
+  if [ ! -z "$P" ]
+  then
+  PROTO=`echo "$P" | cut -d';' -f1`
+  PUERTOO=`echo "$P" | cut -d';' -f2`
+  PUERTOD=`echo "$P" | cut -d';' -f3`
+  if [ ! -z $PROTO ]
+  then
+     PROTO="-p $PROTO"
+  fi
+  if [ ! -z $PUERTOO ]
+  then
+     PUERTOO="--match multiport --sports $PUERTOO"
+  fi
+  if [ ! -z $PUERTOD ]
+  then
+     PUERTOD="--match multiport --dports $PUERTOD"
+  fi
+  SRC=`echo "$P" | cut -d';' -f4`
+  DST=`echo "$P" | cut -d';' -f5`
+#  echo SRC $SRC
+  SRCS=`IPS $SRC`
+#  echo DST $DST
+  DSTS=`IPS $DST`
+#  echo SRCS $SRCS
+  for S in $SRCS
+  do
+#  echo DSTS $DSTS
+  for D in $DSTS
+  do
+  if [ "$S" != "null" ]
+  then
+     SRC="-s $S"
+  else
+     SRC=""
+  fi
+  if [ "$D" != "null" ]
+  then
+     DST="-d $D"
+  else
+     DST=""
+  fi
+  $I -A INPUT $PROTO $PUERTOO $PUERTOD $SRC $DST -j ACCEPT
+  $I -A OUTPUT $PROTO $PUERTOO $PUERTOD $SRC $DST -j ACCEPT
+  $I -A FORWARD $PROTO $PUERTOO $PUERTOD $SRC $DST -j ACCEPT
+  done
+  done
+  fi
+done < $CONFDIR/proto
+fi
+
+######################################################################
+# Entradas desde segmentos wan, lan, dmz
+######################################################################
+
+to_fw wan_to_fw
+to_fw lan_to_fw
+to_fw dmz_to_fw
+echo
+
+######################################################################
+# Reenvios del segmento lan al segmento lan, wan, dmz
+######################################################################
+
+from_lan lan_to_lan
+from_lan lan_to_wan
+from_lan lan_to_dmz
+echo
+from_lan dmz_to_lan
+from_lan dmz_to_wan
+from_lan dmz_to_dmz
+echo
+
+######################################################################
+# Reglas finales
+######################################################################
+
+if [ -n "$DROPLOG" ]
+then
+  $I -A INPUT -j droplog
+  $I -A FORWARD -j droplog
+  $I -A OUTPUT -j droplog
+  $I -A droplog -j LOG --log-level info --log-prefix "iptables:no_aceptado:"
+fi
+
+######################################################################
+# Otras Reglas
+######################################################################
+
+from_wan "wan_to_lan"
+from_wan "wan_to_dmz"
+
+#############################################################################
+# Reglas de derivacion a las subcadenas. SON LAS ULTIMAS QUE DEBEN EJECUTARSE
+#############################################################################
+
+#ENTRADAS a FW: saltar a subcadenas wan, lan, dmz
+ii=${#IF_WAN[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  $I -A INPUT -i ${IF_WAN[$i]} -j wan_to_fw		        #Input desde el segmento wan
+done
+
+ii=${#IF_LAN[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  $I -A INPUT -i ${IF_LAN[$i]} -j lan_to_fw	                #Input desde el segmento lan
+done
+
+ii=${#IF_DMZ[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  $I -A INPUT -i ${IF_DMZ[$i]} -j dmz_to_fw	                #Input desde el segmento dmz
+done
+
+
+#SALIDAS desde FW: se acepta todo
+ii=${#IF_WAN[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  $I -A OUTPUT -o ${IF_WAN[$i]} -j fw_to_wan		#Output al segmento wan
+done
+
+ii=${#IF_LAN[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  $I -A OUTPUT -o ${IF_LAN[$i]} -j fw_to_lan	        #Output al segmento lan
+done
+
+ii=${#IF_DMZ[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  $I -A OUTPUT -o ${IF_DMZ[$i]} -j fw_to_dmz	        #Output al segmento dmz
+done
+
+#Reenvios LAN->WAN
+ii=${#IF_LAN[@]}
+jj=${#IF_WAN[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  for (( j=0; j<${jj}; j++ ));
+  do
+     $I -A FORWARD -i ${IF_LAN[$i]} -o ${IF_WAN[$j]} -j lan_to_wan
+  done
+done
+
+#Reenvios WAN->LAN
+ii=${#IF_WAN[@]}
+jj=${#IF_LAN[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  for (( j=0; j<${jj}; j++ ));
+  do
+    $I -A FORWARD -i ${IF_WAN[$i]} -o ${IF_LAN[$j]} -j wan_to_lan
+  done
+done
+
+#Reenvios LAN->LAN
+ii=${#IF_LAN[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  for (( j=0; j<${ii}; j++ ));
+  do
+    $I -A FORWARD -i ${IF_LAN[$i]} -o ${IF_LAN[$j]} -j lan_to_lan
+  done
+done
+
+#Reenvios DMZ->DMZ
+ii=${#IF_DMZ[@]}
+for (( i=0; i<${ii}; i++ ));
+do
+  for (( j=0; j<${ii}; j++ ));
+  do
+    $I -A FORWARD -i ${IF_DMZ[$i]} -o ${IF_DMZ[$j]} -j dmz_to_dmz
+  done
+done
+
+# Activar reenvio 
+execute "echo 1 > /proc/sys/net/ipv4/ip_forward"
+# Evitar ataques smurf
+execute "echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
+# No aceptar enrutamiento en origen
+execute "echo 0 > /proc/sys/net/ipv4/conf/all/accept_source_route"
+# anti ip spoofing
+execute "echo 1 > /proc/sys/net/ipv4/conf/default/rp_filter"
+execute "echo 1 > /proc/sys/net/ipv4/conf/all/rp_filter"
+
+echo
+echo NAT=$NAT
+
+echo "ejecutando post.rules..."
+. $CONFDIR/post.rules
+
+echo
+echo "Los comandos ejecutados se han salvado en el fichero $OUTPUT"
+}
+
+
+halfstop()
+{
+vaciarhalf
+$I -P INPUT ACCEPT
+$I -P FORWARD ACCEPT
+$I -P OUTPUT ACCEPT
+if [ $NAT ]
+then
+  $I -t nat -A POSTROUTING -o ${IF_WAN} -j MASQUERADE
+fi
+if [ ! -z "$SQUID_BOX" -a ! -z "$SQUID_BOX_IF" -a ! -z "$_TRANSPARENT_MARK" -a ! -z "$TRANSPARENT_TABLE" ]
+then
+  execute "ip rule del fwmark $TRANSPARENT_MARK table $TRANSPARENT_TABLE"
+  execute "ip route del default via $SQUID_BOX dev $SQUID_BOX_IF table $TRANSPARENT_TABLE"
+fi
+}
+
+
+stop()
+{
+vaciar
+$I -P INPUT ACCEPT
+$I -P FORWARD ACCEPT
+$I -P OUTPUT ACCEPT
+if [ $NAT ]
+then
+  $I -t nat -A POSTROUTING -o ${IF_WAN} -j MASQUERADE
+fi
+if [ ! -z "$SQUID_BOX" -a ! -z "$SQUID_BOX_IF" -a ! -z "$TRANSPARENT_MARK" -a ! -z "$TRANSPARENT_TABLE" ]
+then
+  execute "ip rule del fwmark $TRANSPARENT_MARK table $TRANSPARENT_TABLE"
+  execute "ip route del default via $SQUID_BOX dev $SQUID_BOX_IF table $TRANSPARENT_TABLE"
+fi
+}
+
+PATH=/sbin:/usr/local/sbin:$PATH
+I=exec_iptables
+if [ $# -eq 0 ]
+then
+  echo "$0 {start | stop | halfstop | restart | status | save | restore }"
+  exit 1
+else
+  case "$1" in
+    stop)
+	stop
+    ;;
+    halfstop)
+	halfstop
+    ;;
+    start|restart)
+    	stop
+	start
+    ;;
+    save)
+	mkdir -p `dirname "$SAVE"` 2>/dev/null
+	iptables-save > "$SAVE"
+    ;;
+    restore)
+	iptables-restore "$SAVE"
+    ;;
+    status)
+	echo; echo "TABLE filter ----------------------------------------------"
+	iptables --list -n -v -t filter
+	echo; echo "TABLE nat -------------------------------------------------"
+	iptables --list -n -v -t nat
+	echo; echo "TABLE mangle ----------------------------------------------"
+	iptables --list -n -v -t mangle
+    ;;
+  esac
+fi
+

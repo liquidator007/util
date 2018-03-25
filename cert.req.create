@@ -1,0 +1,42 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUso:\n\t$0 csr\n\n"
+  exit 1
+fi
+
+BASE=/certs/requests
+EDITOR=nano
+
+C=$1
+
+if [ -d $BASE/$C ]
+then
+     printf "\n\nYa existe $BASE/$C. Rehusando crear nuevo csr.\n\n"
+     exit 1
+fi
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+mkdir -p $BASE/$C/{conf,private,public}
+chmod 400 $BASE/$C/private
+
+cd $BASE/$C
+
+cp -uR $BASE/plantilla/conf/ .
+
+echo Edite la configuracion por defecto de $C...
+sleep 3
+$EDITOR ./conf/openssl.cnf
+
+KEY=./private/$C.pem
+CSR=./public/$C.csr
+CNF=./conf/openssl.cnf
+CNF_CMD="-config $CNF"
+
+ejecutar "openssl req -new -keyout $KEY -out $CSR $CNF_CMD"

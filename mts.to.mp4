@@ -1,0 +1,41 @@
+#!/bin/bash
+
+LOG=/tmp/mts.to.mp4.log
+
+if [ "$1" == "-d" ]
+then 
+  delete=1
+  shift
+else
+  delete=0
+fi
+
+for F in "$*"
+do
+  if [ -f "${F}" ]
+  then
+    filename=$(basename "${F}")
+    pathtofile=$(dirname "${F}")
+    extension="${filename##*.}"
+    filename="${filename%.*}"
+
+    if [ $delete -eq 1 ]
+    then
+      rm -f "${pathtofile}/${filename}.mp4"
+    fi
+    echo ffmpeg -threads 10 -i "${F}" -f mp4 -vcodec copy -acodec copy "${pathtofile}/${filename}.mp4"  >> $LOG  2>&1
+    ffmpeg -threads 10 -i "${F}" -f mp4 -vcodec copy -acodec copy "${pathtofile}/${filename}.mp4"  >> $LOG  2>&1
+    RET=$?
+    printf "Converting ${F} to ${pathtofile}/${filename}.mp4..."
+    if [ $RET -ne 0 ]
+    then
+      echo ERROR
+    else
+      echo OK
+    fi
+    if [ $delete -eq 1 ]
+    then
+      rm -f "${F}"
+    fi
+  fi
+done

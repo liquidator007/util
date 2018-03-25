@@ -1,0 +1,8 @@
+cd ~
+
+echo rm -rf VDR-NG-EM/VDR-NG
+cd VDR-NG-EM/
+
+./make-plugins
+
+echo entrar en VDR-NG-EM/VDR-NG/PLUGINS/lib/

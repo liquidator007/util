@@ -1,0 +1,27 @@
+echo Instalando paquetes necesarios...
+sudo apt-get install build-essential subversion make automake bison binutils genext2fs texinfo libmpfr-dev patch zlib1g-dev libncurses5-dev gettext language-pack-en locales flex texlive subversion
+
+echo reconfigurando locales...
+sudo dpkg-reconfigure locales
+
+export CC=/usr/bin/gcc-3.4
+
+sudo ln -fs /bin/bash /bin/sh
+
+cd ~
+
+echo haciendo svn checkout...
+svn checkout -q http://svn.assembla.com/svn/VDR-M7x0/unstable ./VDR-NG-EM
+
+export PATH=$PATH:./
+
+cd ./VDR-NG-EM
+#sudo ./make-vdr
+sudo ./make-fw
+
+echo es el momento de editar el ".config" en VDR-NG-FW si es necesario, y pulsar INTRO para seguir...
+
+read
+
+cd VDR-NG-FW
+make

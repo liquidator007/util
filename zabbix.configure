@@ -1,0 +1,1 @@
+configure --with-ldap --enable-static --enable-ipv6 --enable-server --enable-proxy --enable-agent --with-mysql --with-ucd-snmp --with-openipmi

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+#rebase: aplica al branch actual todos los cambios que hayan tenido lugar
+#en el branch $1 desde que actualizamos nuestra copia la ultima vez
+
+if [ $# -gt 1 ]
+then
+  printf "\n\nUso:\n\t$0 branch\n\n"
+  exit 1
+fi
+
+git rebase $1

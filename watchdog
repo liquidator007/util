@@ -1,0 +1,13 @@
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+echo "Iniciando $0" 
+while true
+do
+	/sbin/route -n | /bin/grep -q 0.0.0.0.*0.0.0.0.*ippp0
+	if [ $? -ne 0 ]
+	then
+		echo "Restaurando conexión a Internet..." 
+		route del -net 0.0.0.0	#eliminar ruta por omisión
+		/util/rc.isdn		#reconectar la RDSI
+	fi
+	sleep 60			#espera de 60 segundos
+done

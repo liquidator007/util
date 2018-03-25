@@ -1,0 +1,2 @@
+echo "Modificar grupos"
+groupmod $*

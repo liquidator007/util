@@ -1,0 +1,16 @@
+#!/bin/bash
+
+for F in $*
+do
+  filename=$(basename $F)
+  extension="${filename##*.}"
+  filename="${filename%.*}"
+
+  echo "$F -> $filename.mp4"
+  #avconv -qscale 1 -i "${F}" -strict experimental "${filename}.mp4"
+
+
+  avconv -y -i "${F}" -f mp4 -r 23.976 -vcodec libx264 -preset slow -filter:v scale=1280:720 -b:v 3000k -aspect 16:9 -flags +loop -cmp chroma -maxrate 3500k -bufsize 4M -bt 256k -refs 1 -bf 3 -coder 1 -me_method umh -me_range 16 -subq 7 -partitions +parti4x4+parti8x8+partp8x8+partb8x8 -g 250 -keyint_min 25 -level 30 -qmin 10 -qmax 51 -qcomp 0.6 -trellis 2 -sc_threshold 40 -i_qfactor 0.71 -acodec libvo_aacenc -b:a 384k -ar 48000 -ac 2 "${filename}.mp4"
+
+done 
+

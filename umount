@@ -1,0 +1,12 @@
+if [ $# -eq 0 ]
+then
+  printf "\nUso:\n\t$0 device...\n\n"
+  exit 1
+fi
+
+for FS in $*
+do
+  echo Desmontando $FS...
+  fuser -mv $FS
+  /bin/umount $FS
+done

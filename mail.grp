@@ -1,0 +1,23 @@
+if [ $# -eq 0 ]
+then
+  echo "Uso: $0 <grupo>..."
+  exit 1
+fi
+LMIEMBROS=""
+for G in $*  #para los grupos especificados...
+do
+  grep $G /etc/group >/dev/null
+  if [ $? -ne 0 ]  #grupo no existe...
+  then
+    echo "El grupo $G no existe!"
+  else
+  NGRUPO=`grep $G: /etc/group | cut -f3 -d':'`
+  MIEMBROS=`grep $NGRUPO /etc/passwd | cut -f1 -d':' | tr '
+' ' '`
+  echo "Grupo $G($NGRUPO). Miembros=$MIEMBROS"
+  LMIEMBROS="$LMIEMBROS $MIEMBROS"
+  fi
+done
+echo
+echo "Enviando correo a los usuarios: $LMIEMBROS"
+mail $LMIEMBROS

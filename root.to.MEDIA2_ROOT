@@ -1,0 +1,52 @@
+#!/bin/bash
+
+#OJO: Usando "--detect-moved", experimental. Requiere reconstruir rsync desde las fuentes y aplicar los
+#parches detect-renamed.diff y detect-renamed-lax.diff (Bajar con git rsync y rsync-patches)
+
+SRC=/
+DST=/media/MEDIA2_ROOT/
+DST_UUID=/dev/disk/by-label/MEDIA2_ROOT
+
+DELETE_FIND=""
+DELETE_RM=""
+
+echo Creando punto de montaje...
+sudo mkdir -p $DST >/dev/null 2>&1
+
+echo montando $DST_UUID en $DST...
+sudo mount -t auto $DST_UUID $DST
+echo "remontando (rw) $DST_UUID en $DST..."
+sudo mount -o rw,remount $DST_UUID 
+if [ $? -eq 2 ]
+then
+  echo Error, no se pudo montar 
+  exit 1
+fi
+
+for D in $DELETE_FIND
+do
+  echo Borrando "$D" en $SRC...
+  sudo find $SRC -xdev -name "$D" -type f -exec rm -rf {} \;
+done
+
+for D in $DELETE_RM
+do
+  echo Borrando $SRC/$D...
+  sudo rm -rf $SRC/$D \;
+done
+
+echo borrando paquetes para ahorrar espacio... 
+sudo apt-get autoremove
+sudo apt-get clean
+sudo apt-get autoclean
+
+echo Sincronizando $SRC sobre $DST...
+sudo rsync -o -g -p --archive --verbose --one-file-system -H --exclude-from=/util/root.to.MEDIA2_ROOT.exclude --delete --delete-after --delete-excluded $SRC $DST
+
+echo "remontando (ro) $DST_UUID en $DST..."
+sudo mount -o ro,remount $DST_UUID 
+if [ $? -eq 2 ]
+then
+  echo Error, no se pudo montar 
+  exit 1
+fi

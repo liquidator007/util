@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUso:\n\t$0 branch\n\n"
+  exit 1
+fi
+
+git merge $1

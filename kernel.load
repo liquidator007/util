@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# titulo: kernel.load
+# descripcion: script para instalar fuentes del kernel en /usr/src
+#
+
+if [ $# -ne 1 ]
+then
+  APP=`basename $0`
+  printf "Uso:\n\t$APP version-kernel-a-instalar\n\n">&2
+  exit 1
+fi
+
+KERNELDIR=/usr/src/linux-$1
+
+if [ -d $KERNELDIR ]
+then
+  printf "$KERNELDIR Existe! \n\n">&2
+  exit 1
+fi
+
+#determinar el empaquetado
+SRCDIR=$PWD
+BZ2=$SRCDIR/linux-$1.tar.bz2
+TGZ=$SRCDIR/linux-$1.tgz
+TARGZ=$SRCDIR/linux-$1.tar.gz
+TAR=$SRCDIR/linux-$1.tar
+printf "Seleccionando la mejor distribucion disponible..."
+if [ -f $TAR ]
+then
+  printf "(.tar)\n"
+elif [ -f $TARGZ ]
+then
+  printf "(.tar.gz)\n"
+elif [ -f $TGZ ]
+then
+  printf "(.tgz)\n"
+elif [ -f $BZ2 ]
+then
+  printf "(.bz2)\n"
+else
+  printf "no encontrado\n">&2
+  exit 1
+fi
+
+cd /usr/src
+#printf "Rompiendo el enlace simbolico linux->linux-x.y.z...\n"
+#rm -f linux
+
+printf "Extrayendo..."
+if [ -f $TAR ]
+then
+  tar xf $TAR
+elif [ -f $TARGZ ]
+then
+  gzip -cd $TARGZ | tar xf -
+elif [ -f $TGZ ]
+then
+  gzip -cd $TGZ | tar xf -
+elif [ -f $BZ2 ]
+then
+  bzip2 -cd $BZ2 | tar xf -
+fi
+
+printf "extraido\n"
+#printf "reajustando el enlace simbolico..."
+#if [ -d linux ]
+#then
+#  mv linux linux-$1
+#fi
+#cd /usr/src
+ln -sf linux-$1 linux
+
+#chown -R root.root linux
+printf "Asignando propietario y grupo..."
+chown -R root.root linux-$1
+
+cd $DIR
+printf "Ok!\n\n"

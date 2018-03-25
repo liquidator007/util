@@ -1,0 +1,4 @@
+#/bin/bash
+echo 'Moviendo ficheros de configuración del tftp al directorio del root'
+mv /tftpboot/*.cfg /root/confs/.
+mv /root/confs/pxelinux.cfg /tftpboot/.

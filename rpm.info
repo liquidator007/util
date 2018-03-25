@@ -1,0 +1,15 @@
+#!/bin/sh
+
+for A in $*
+do
+	echo
+	echo "PAQUETE: $A"
+	echo "=============================================================================="
+	rpm -qi $A
+	echo
+	echo "Requiere:"
+	rpm -q -requires $A
+	echo
+	echo "Provee:"
+	rpm -q -provides $A
+done

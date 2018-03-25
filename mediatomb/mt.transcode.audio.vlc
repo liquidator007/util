@@ -1,0 +1,14 @@
+#!/bin/bash
+
+VLC_PATH="/usr/bin/vlc"
+INPUT="$1"
+OUTPUT="$2"
+AUDIO_CODEC="s16l"
+AUDIO_BITRATE="192"
+AUDIO_SAMPLERATE="44100"
+AUDIO_CHANNELS="2"
+FORMAT="raw"
+
+exec "${VLC_PATH}" "${INPUT}" -I dummy --sout "#transcode{acodec=${AUDIO_CODEC},\
+ab=${AUDIO_BITRATE},samplerate=${AUDIO_SAMPLERATE},channels=${AUDIO_CHANNELS}}:\
+standard{mux=${FORMAT},access=file,dst=${OUTPUT}}" vlc:quit >/dev/null 2>&1

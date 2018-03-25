@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo Nombre codigo de la distro \(ej. "jaunty" \): 
+read DIST
+
+sudo wget http://www.medibuntu.org/sources.list.d/${DIST}.list --output-document=/etc/apt/sources.list.d/medibuntu.list
+sudo apt-get update && sudo apt-get install medibuntu-keyring && sudo apt-get update

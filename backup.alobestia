@@ -1,0 +1,13 @@
+#Backup de un sistema de archivos sin considerar el disco vacio
+
+#Ocupar el disco completo, hasta obtener ENOSPACE
+dd if=/dev/zero of=zero-file
+
+#Eliminar el fichero
+rm zero-file
+
+#Remontar solo-lectura
+mount /mount-point -o remount,ro
+
+#Backup del sistema de ficheros
+dd if=/dev/XXX bs=32k | gzip -9 > /path/to/image/file.raw.gz

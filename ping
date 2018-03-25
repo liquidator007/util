@@ -1,0 +1,8 @@
+TO=172.20.254.100
+
+while true
+do
+ping -c 1 $TO
+ping -c 1 $TO
+sleep 5
+done

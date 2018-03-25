@@ -1,0 +1,19 @@
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso: $0 perfil capturas...\n"
+  exit 1
+fi
+
+tmpfich=/tmp/wifi-scripts
+. $tmpfich
+. $1
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+shift
+
+ejecutar "aircrack-ng -z -e $ESSID -b $BSSID $*"

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\nUso:\n\t$0 dir ...\n\n"
+  exit 1
+fi
+
+PATH=/util:$PATH
+
+#variables
+GRP=biblio-md5
+MD5=.md5sum
+DUP=.md5dup
+UNI=.md5uni
+D_UNI=.uni
+D_DUP=.dup
+
+#Crear un usuario virtual al que se asignaran los libros indizados
+groupadd $GRP >/dev/null 2>&1	
+
+for D in $*
+do
+  if [ -d $D ]		#es un directorio
+  then
+    cd $D
+    if [ $? -eq 0 ]	#se pudo entrar
+    then
+      #borrar ficheros y carpetas MD5
+      rm -rf DUP* $MD5 $DUP $UNI $D_UNI $D_DUP >/dev/null 2>&1
+      #devolver los ficheros a root
+      find . -name '*.c' -type f -group $GRP -exec chgrp root {} \; 
+    fi
+  fi
+done

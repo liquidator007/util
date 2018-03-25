@@ -1,0 +1,5 @@
+for DEV in $*
+do
+  echo Dispositivo $DEV
+  dmraid -E -r $DEV
+done

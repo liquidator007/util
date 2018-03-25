@@ -1,0 +1,5 @@
+#!/bin/sh
+
+find / -name nohup.out -o -name '*~' -o -name '*.tmp' -o -name '*.old' \
+       -exec ls -ld {} \;
+

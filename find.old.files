@@ -1,0 +1,11 @@
+cat /etc/passwd |
+while read userEntry
+do
+  homedir=`echo $userEntry | awk -F: '$3 >= 100 {print $6}'`
+  echo "Salida en $homedir/.oldfiles"
+  if [ -n "$homedir" ]
+  then
+    find $homedir -atime +365 -mtime +365 -type f -print \
+        >$homedir/.oldfiles
+  fi
+done

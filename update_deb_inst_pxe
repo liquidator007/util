@@ -1,0 +1,15 @@
+#!/bin/bash
+# Script para actualizar los instaladores debian sobre PXE:
+
+REPOS=ftp.de.debian.org
+
+for dist in testing stable
+do
+	for pr in amd64 i386
+	do
+		wget -l 2 -r -nc -np -P/tmp http://$REPOS/debian/dists/$dist/main/installer-$pr/current/images/netboot/debian-installer/$pr/boot-screens
+		cp -R /tmp/$REPOS/debian/dists/$dist/main/installer-$pr/current/images/netboot/debian-installer/$pr/*.* /tftpboot/images/debian/$dist/$pr/.
+	done
+done
+
+# rm -r /tmp/$REPOS

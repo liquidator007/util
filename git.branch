@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ $# -gt 1 ]
+then
+  printf "\n\nUso:\n\t$0 [new branch version]\n\n"
+  exit 1
+fi
+
+git branch $1

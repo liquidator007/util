@@ -1,0 +1,41 @@
+#!/bin/sh
+
+#(c)1999 Miguel Angel Ibáñez Mompeán
+
+#describe. Usa un fichero llamado '.descripcion' en cada directorio,
+#que define para que sirve cada archivo. El formato de ese fichero consiste
+#en dos campos, separados por ":". El primero es el nombre del fichero, y
+#el segundo una descripción. El fichero debería estar ordenado.
+
+DIR=`pwd`
+CMD=`basename $0`
+PTH=$PATH
+
+if [ $# -eq 0 ]
+then
+  printf "Uso:\n\t$CMD ruta...\n\n"
+  exit 1
+fi
+
+for X in $* 
+do
+  if [ -d $X ]
+  then
+    D=$X
+    B=\*
+  else
+    D=`dirname $X`
+    B=`basename $X`
+  fi
+  cd $D
+  #echo "D=$D, B=$B"
+  if [ -f .description ]
+  then
+    /bin/sort < .description >/tmp/.description
+    /bin/ls -1d $B | /bin/sort | /usr/bin/join -a1 -t: - /tmp/.description
+  else
+    /bin/ls -1d $B | /bin/sort 
+  fi
+done
+
+cd $DIR

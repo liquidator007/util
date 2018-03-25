@@ -1,0 +1,12 @@
+if [ $# -ne 1 ]
+then
+  echo "Uso: quien <segundos>"
+  exit 1
+fi
+while true
+do
+  clear
+  date
+  w
+  sleep $1
+done

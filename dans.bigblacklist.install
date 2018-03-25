@@ -1,0 +1,32 @@
+#!/bin/bash
+
+URL="http://urlblacklist.com/cgi-bin/commercialdownload.pl?type=download&file=bigblacklist"
+DANS_CFG_DIR="/etc/dansguardian"
+DANS_BLACKLIST_DIR=$DANS_CFG_DIR/blacklists
+DANS_BL_UPDATE_DIR=$DANS_CFG_DIR/bl.update
+OLDNAME="commercialdownload.pl*"
+NEWNAME="bigblacklist.tgz"
+TMPDIR=/tmp
+
+cd $TMPDIR
+rm -f $OLDNAME
+wget "$URL"
+
+if [ -f "$OLDNAME" ]
+then
+  sudo mkdir -p $DANS_CFG_DIR 2>/dev/null
+  echo renaming downloaded file $OLDNAME to $NEWNAME ...
+  mv -f $OLDNAME $NEWNAME
+  echo recursively deleting old blacklists from $DANS_BLACKLIST_DIR ...
+  sudo rm -rf $DANS_BLACKLIST_DIR
+  echo recursively deleting old updates from $DANS_BL_UPDATE_DIR ...
+  sudo rm -rf $DANS_BL_UPDATE_DIR
+  echo extracting new blacklists to $DANS_CFG_DIR ...
+  sudo tar --directory $DANS_CFG_DIR -zxvf $NEWNAME
+  echo computing new blacklists \' space usage ...
+  du -hs $DANS_BLACKLIST_DIR
+  echo fin
+else
+  echo Download error \(too many downloads today\?\) Bye
+  exit 1
+fi

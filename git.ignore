@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  vim .gitignore
+else
+for D in $*
+do
+cd $D && \
+   echo Editar $D/.gitignore...espere... && \
+   sleep 5 && \
+   vim .gitignore
+done
+fi

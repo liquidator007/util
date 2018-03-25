@@ -1,0 +1,101 @@
+#!/bin/bash
+#descarga del BOE dada la fecha
+
+trap 'echo Recibido SIGTERM; exit 1' SIGTERM
+trap 'echo Recibido SIGKILL; exit 1' SIGKILL
+
+PATH=$PATH:/util:/bin:/usr/bin
+
+C=`basename $0`
+LOG=/tmp/$C.log
+
+logger "$0: `date`"
+date >$LOG
+
+if [ $# -ne 3 ]
+then
+  printf "\n\nUso:\n\t $C año mes dia\n\n"
+  exit 1
+fi
+
+A=`expr $1 \+ 0`
+M=`expr $2 \+ 0`
+D=`expr $3 \+ 0`
+
+F=`printf "%.4d-%.2d-%.2d" $A $M $D`
+H="$F 12:00pm"
+
+MIRROR=/var/spool/mirrors
+BOES=$MIRROR/www.boe.es/boe/dias
+
+TIPO=.pdf,.Pdf,.PDF,.php
+
+F_PAR=`printf "%.4d%.2d%.2d" $A $M $D`
+F_MIN="19980101"
+F_ACT=`date "+%Y%m%d"`
+
+if [ $F_PAR -lt $F_MIN -o $F_PAR -gt $F_ACT ]
+then	#Fecha fuera de rango
+  exit 1
+fi
+
+if [ -d $BOES/$1/$F ]
+then	#existe al BOE
+  echo "La fecha $F ya existe en $BOES"
+  touch --date="$H" $BOES/$1/$F
+  exit 1
+fi
+
+#OJO:
+#Si se usa con proxy, se obtiene error "302 Moved Temporarily"
+#  (wget --mirror --level=4 -R.tif,.tiff,.jpg,.jpeg,.gif  \
+#     --proxy=off --directory-prefix=/var/spool/mirrors \
+#     http://www.boe.es/g/es/boe/dias/$F  ) 
+
+
+#Bajar las 5 secciones, una a una, evita bajar mucha basura...
+for S in 1 2 3 4 5
+do
+  SS="seccion$S.php"
+  URL="http://www.boe.es/g/es/boe/dias/$F/$SS"
+  rm -rf $MIRROR/www.boe.es/g/es/boe/dias/$F
+#--mirror= -r -N -l inf -nr
+# -r = --recursive : recuperacion recursiva
+# -N = --timestamping : activar marcas de tiempo
+# -l <depth> = --level=<depth> : profundidad maxima de recursion
+# -nr = --dont-remove-listing : En FTP, no borrar fichero ".listing"
+# -D <dominios> = --domains=<dominios> : Lista de dominios a seguir
+# -c = --continue : continuar descargas parciales interrumpidas
+
+#NOTA: NO CONVIENE usar -N, puesto que las fechas se modifican para uso del buscador
+#  wget --mirror --level=1 -A$TIPO --proxy=off --directory-prefix=$MIRROR $URL
+  wget -D www.boe.es -c -r --level=1 -A$TIPO --proxy=on --directory-prefix=$MIRROR $URL
+done
+
+#Una vez descargado, ajustar fecha y moverlo a su carpeta de año
+
+cd $BOES/$F
+if [ $? -ne 0 ]
+then
+  echo "No hay ficheros en $BOES/$F"
+  exit 1
+else
+  mv pdfs/* .
+  rm -rf pdfs
+
+  touch --date="$H" * . 
+
+  cd $BOES
+
+  if [ ! -d $A ]
+  then
+    mkdir $A
+    chmod 755 $A
+    chown www.www $A
+  fi
+
+  chown -R www.www $F
+  chmod -R 755 $F
+  mv -f $F $A
+  touch --date="$1-01-01 12:00pm" $A
+fi

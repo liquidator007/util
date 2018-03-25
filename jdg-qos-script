@@ -1,0 +1,390 @@
+#!/bin/bash
+#
+# Jim diGriz's QoS Scheduler (http://www.digriz.org.uk/jdg-qos-script/)
+#       <alex@digriz.junk-this.org.uk> [remove 'junk-this' to mail me]
+#       GPL V2 blar blar blar
+#       Version: 031207 (aka 7th December 2003) NEW
+#
+# Dependencies
+# 1) HTB3 patch (if earlier than 2.4.18) and 'tc' patch
+# 2) RED (in kernel 2.4.x and 2.6.x)
+# 3) iptables (in kernel 2.4.x and 2.6.x)
+# 4) ESFQ patch (http://www.ssi.bg/~alex/esfq/index.html) and 'tc' patch
+# [ 5) IMQ patch (http://trash.net/~kaber/imq/) and 'tc' patch ]
+# [ 6) IPP2P patch (http://rnvs.informatik.uni-leipzig.de/ipp2p/index_en.html) ]
+# [ 7) CONNMARK patch (http://www.netfilter.org/) {if you need IPP2P} ]
+
+# Dependencies (when you need IMQ):
+# 1) for NAT must have IMQ
+# 2) for QoS to affect locally generated traffic in a non ethernet bridge setup
+#	you must have IMQ
+#
+# IPP2P is a nice feature that lets iptables identify P2P traffic.  This really
+# is only useful to identify the headers and starts of data transfers which in
+# its-self is pretty useless, however if combined with CONNMARK you have a very
+# simple system which can mark all the P2P traffic as low priority; this
+# offloads all the difficult work onto the connecting tracking system.
+
+# debug on....comment out if you want BASH script debugging off
+set -x
+
+# external config file
+# to use this, point QOS_CONFIG to your required file and create a textfile
+# with all the tweakable variables below in.
+#
+QOS_CONFIG=/etc/default/jdg-qos-script
+
+# local programs
+TC=/usr/local/sbin/tc
+IPTABLES=/sbin/iptables
+IP=/sbin/ip
+MODPROBE=/sbin/modprobe
+
+# ballpark configuration details (all in kbit)
+DWIF=eth1			# LAN facing interface
+DWIFLIMIT=408			# Download Speed (2048*0.8) 408
+UPIF=eth0			# WAN facing interface
+UPIFLIMIT=204			# Upload Speed (256*0.8) 204
+NAT=1				# 1 || 0 (yes || no)
+LOCAL_TRAFFIC="10.0.0.0/16"	# 'local' LAN address
+ETHERNET_BRIDGE=0		# 1 || 0 (yes || no)
+REALTIME_BANDWIDTH=0		# value in kbit
+FORCE_LOW_PRIORITY="4662"	# low priority traffic (edonkey: 4662)
+NETFILTER_P2P=0			# netfilter p2p matching support
+
+# do not change anything below here....I mean it.....I am talking to you buster!
+[ -e $QOS_CONFIG ] && . $QOS_CONFIG
+
+HTB_DEBUG=0000000000000000
+
+REAL_UPIF=$UPIF
+REAL_DWIF=$DWIF
+if (( $NAT || ! $ETHERNET_BRIDGE ))
+then
+	UPIF=imq0
+fi
+
+if (( ! $ETHERNET_BRIDGE ))
+then
+	DWIF=imq1
+fi
+
+if [ "$1" = "status" ]
+then
+	$TC -s qdisc ls dev $DWIF
+	$TC -s qdisc ls dev $UPIF
+	$IPTABLES -t mangle -L SHAPER-OUT -v -n
+	$IPTABLES -t mangle -L SHAPER-IN -v -n
+	exit
+fi
+
+if [ "$1" = "pollbuckets" ]
+then
+	watch -n1 "$TC -s qdisc show dev $DWIF; \
+		echo \"--------\"; $TC -s qdisc show dev $UPIF"
+	exit
+fi
+
+if [ "$1" = "pollrules" ]
+then
+	watch -n1 "$IPTABLES -t mangle -L SHAPER-OUT -v -n; \
+		echo \"--------\"; $IPTABLES -t mangle -L SHAPER-IN -v -n"
+	exit
+fi
+
+if ( [ "$1" != "stop" ] && [ "$1" != "start" ] && [ "$1" != "restart" ] )
+then
+        exit
+fi
+
+$TC qdisc del dev $DWIF root &> /dev/null
+$IPTABLES -t mangle -D PREROUTING -i $REAL_UPIF -j SHAPER-IN &> /dev/null
+
+$TC qdisc del dev $UPIF root &> /dev/null
+$IPTABLES -t mangle -D POSTROUTING -o $REAL_UPIF -j SHAPER-OUT &> /dev/null
+
+
+if (( ! $ETHERNET_BRIDGE ))
+then
+	$IPTABLES -t mangle -D PREROUTING -i $REAL_UPIF \
+		-j IMQ --todev 1 &> /dev/null
+fi
+if (( $NAT || ! $ETHERNET_BRIDGE ))
+then
+	$IPTABLES -t mangle -D POSTROUTING -o $REAL_UPIF \
+		-j IMQ --todev 0 &> /dev/null
+fi
+
+if (( $NAT || ! $ETHERNET_BRIDGE ))
+then
+	$IP link set $UPIF down &> /dev/null
+	if (( ! $ETHERNET_BRIDGE ))
+	then
+		$IP link set $DWIF down &> /dev/null
+	fi
+	$MODPROBE -r imq &> /dev/null
+fi
+
+$IPTABLES -t mangle -F SHAPER-IN &> /dev/null
+$IPTABLES -t mangle -X SHAPER-IN &> /dev/null
+
+$IPTABLES -t mangle -F SHAPER-OUT &> /dev/null
+$IPTABLES -t mangle -X SHAPER-OUT &> /dev/null
+
+if ( [ "$1" = "stop" ] )
+then
+	exit
+fi
+
+############# configuring QoS system ######################
+$IPTABLES -t mangle -N SHAPER-OUT
+$IPTABLES -t mangle -N SHAPER-IN
+
+if (( $NAT || ! $ETHERNET_BRIDGE ))
+then
+	if (( ! $ETHERNET_BRIDGE ))
+	then
+		$MODPROBE imq numdevs=2
+		$IP link set $DWIF up
+	else
+		$MODPROBE imq numdevs=1
+	fi
+	$IP link set $UPIF up
+fi
+
+###### uplink
+# install root HTB, point default traffic to 1:27:
+
+$TC qdisc add dev $UPIF root handle 1: htb default 1 debug $HTB_DEBUG
+$TC class add dev $UPIF parent 1: classid 1:2 htb \
+	rate $[$UPIFLIMIT-$REALTIME_BANDWIDTH]kbit ceil ${UPIFLIMIT}kbit
+
+if (( $REALTIME_BANDWIDTH ))
+then
+	$TC class add dev $UPIF parent 1: classid 1:3 htb \
+		rate ${REALTIME_BANDWIDTH}kbit prio 0
+	$TC qdisc add dev $UPIF parent 1:3 handle 30: esfq perturb 10 hash src
+	$TC filter add dev $UPIF parent 1: prio 0 protocol ip handle 30 fw flowid 1:3
+fi
+
+# shape everything at $UPIFLIMIT speed - this prevents huge queues in your
+# DSL modem which destroy latency:
+
+for LOOP in `seq 0 9`
+do
+	# high prio class 1:20 to low prio class 1:29:
+	$TC class add dev $UPIF parent 1:2 classid 1:$[$LOOP+20] htb \
+		rate $[(5-($LOOP/2))*$UPIFLIMIT/10]kbit \
+		ceil ${UPIFLIMIT}kbit burst 6k prio $LOOP
+
+	# all get Enchanced Stochastic Fairness (depending on src ip):
+	$TC qdisc add dev $UPIF parent 1:$[$LOOP+20] handle $[$LOOP+20]: esfq \
+		perturb 10 hash src
+
+	# setup $IPTABLES hooks
+	$TC filter add dev $UPIF parent 1: prio $LOOP protocol ip \
+		handle $[$LOOP+20] fw flowid 1:$[$LOOP+20]
+done
+
+if (( $NAT || ! $ETHERNET_BRIDGE ))
+then
+	$IPTABLES -t mangle -I POSTROUTING -o $REAL_UPIF -j IMQ --todev 0
+fi
+$IPTABLES -t mangle -I POSTROUTING -o $REAL_UPIF -j SHAPER-OUT
+
+########## downlink #############
+# slow downloads down to somewhat less than the real speed  to prevent 
+# queuing at our ISP. Tune to see how high you can set it.
+# ISPs tend to have *huge* queues to make sure big downloads are fast
+#
+$TC qdisc add dev $DWIF root handle 1: htb default 1 debug $HTB_DEBUG
+$TC class add dev $DWIF parent 1: classid 1:2 htb \
+	rate $[$DWIFLIMIT-$REALTIME_BANDWIDTH]kbit ceil ${DWIFLIMIT}kbit
+
+if (( $REALTIME_BANDWIDTH ))
+then
+        $TC class add dev $DWIF parent 1: classid 1:3 htb \
+		rate ${REALTIME_BANDWIDTH}kbit prio 0
+        $TC qdisc add dev $DWIF parent 1:3 handle 30: esfq perturb 10 hash dst
+        $TC filter add dev $DWIF parent 1: prio 0 protocol ip handle 30 \
+		fw flowid 1:3
+fi
+
+$TC class add dev $DWIF parent 1:2 classid 1:20 htb rate $[$DWIFLIMIT/2]kbit \
+	ceil ${DWIFLIMIT}kbit burst 6k prio 0
+$TC class add dev $DWIF parent 1:2 classid 1:21 htb rate $[$DWIFLIMIT/2]kbit \
+	ceil ${DWIFLIMIT}kbit burst 6k prio 1
+
+$TC qdisc add dev $DWIF parent 1:20 handle 20: esfq perturb 10 hash dst
+# ----
+RED_MAX=$[($DWIFLIMIT*1000/8)/5] # /5 to make latency 200ms
+RED_MIN=$[$RED_MAX/3]
+RED_LIMIT=$[$RED_MAX*8]
+RED_AVPKT=1000
+# ----
+$TC qdisc add dev $DWIF parent 1:21 handle 21: red bandwidth ${DWIFLIMIT} \
+	probability 0.02 limit ${RED_LIMIT} min ${RED_MIN} max ${RED_MAX} \
+	avpkt ${RED_AVPKT} burst $[((2*$RED_MIN)+($RED_MAX))/(3*$RED_AVPKT)] ecn
+
+$TC filter add dev $DWIF parent 1: prio 0 protocol ip handle 20 fw flowid 1:20
+$TC filter add dev $DWIF parent 1: prio 1 protocol ip handle 21 fw flowid 1:21
+
+if (( ! $ETHERNET_BRIDGE ))
+then
+	$IPTABLES -t mangle -I PREROUTING -i $REAL_UPIF -j IMQ --todev 1
+fi
+$IPTABLES -t mangle -I PREROUTING -i $REAL_UPIF -j SHAPER-IN # UP as PREROUTING
+################## finish QoS configuration #########################
+
+################# begin packet classification #######################
+# `Advanced' users can tweak the iptables section at the end of the script.
+# For upload you have ten `buckets' (numbered 20 to 29, where 29 is low priority)
+# to pick from.  You work out a chain of iptables rules to decide what type of
+# packet goes into which bucket.  Treat the beginning of the chain to set a base
+# `MARK', and then later iptable rules adjust the packet so when you leave the 
+# chain the packet has the desired MARKing (and so priority).  For downloading,
+# you have only two buckets, number 20 where traffic cannot be dropped, such as
+# ICMP and UDP traffic (and also high priority); whilst number 21 is for bulk
+# traffic which can be dropped safely with knowledge that it is not going to
+# generate more traffic, such as TCP traffic.
+#
+# N.B.
+# shaping only works for OUTGOING packets simply so think which interface to use
+# when you apply shaping to incoming packets you really are saying which ones
+# are safe to drop (without generating more traffic, FTP data) and which are
+# unsafe (UDP as it will not slow down the data transfer and has already
+# consumed your bandwidth and TCP ACK's are examples).
+#
+# Useful Info
+# IPTables TOS Fields:
+#       Minimize-Delay 16 (0x10)
+#       Maximize-Throughput 8 (0x08)
+#       Maximize-Reliability 4 (0x04)
+#       Minimize-Cost 2 (0x02),
+#       Normal-Service 0 (0x00).
+
+for SUBNET in $LOCAL_TRAFFIC; # local traffic bucket
+do
+	$IPTABLES -t mangle -A SHAPER-OUT -d $SUBNET -j RETURN
+	$IPTABLES -t mangle -A SHAPER-IN -s $SUBNET -j RETURN
+done
+
+########## upload (20->29)
+# REALTIME bandwidth handling, example is everything from 10.0.0.2
+# $IPTABLES -t mangle -I SHAPER-OUT -s 10.0.0.2 -j MARK --set-mark 30
+# $IPTABLES -t mangle -I SHAPER-OUT -s 10.0.0.2 -j RETURN
+
+$IPTABLES -t mangle -A SHAPER-OUT -p icmp -j MARK --set-mark 20 # icmp (ping)
+
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m tcp --tcp-flags ! SYN,RST,ACK ACK \
+	-j MARK --set-mark 21 # 'normal' tcp control flags
+
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m tcp --tcp-flags SYN,RST,ACK ACK \
+	-m length --length :128 -m tos --tos ! Normal-Service \
+	-j MARK --set-mark 21 # regular ACK
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m tcp --tcp-flags SYN,RST,ACK ACK \
+	-m length --length 128: -j MARK --set-mark 29 # P2P traffic ACK
+
+$IPTABLES -t mangle -A SHAPER-OUT -p udp -j MARK --set-mark 24 # udp traffic
+
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m tos --tos Minimize-Delay \
+	-m mark --mark 0 -j MARK --set-mark 23 # low latency traffic
+
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp --sport ssh:telnet \
+	-j MARK --set-mark 22 # ssh/telnet
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp --dport ssh:telnet \
+	-j MARK --set-mark 22 # ssh/telnet
+
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp --sport http \
+	-j MARK --set-mark 26 # web traffic
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp --dport http \
+	-j MARK --set-mark 26 # web traffic
+
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp --sport smtp \
+	-j MARK --set-mark 27 # smtp traffic
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp --dport smtp \
+	-j MARK --set-mark 27 # smtp traffic
+
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m tos --tos Maximize-Throughput \
+	-j MARK --set-mark 28 # get bulk traffic
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m tos --tos Minimize-Cost \
+        -j MARK --set-mark 28 # get bulk traffic
+
+for PORT in $FORCE_LOW_PRIORITY; # force traffic into lowest priority bucket
+do
+	$IPTABLES -t mangle -A SHAPER-OUT -p tcp --sport $PORT \
+		-j MARK --set-mark 29
+	$IPTABLES -t mangle -A SHAPER-OUT -p tcp --dport $PORT \
+		-j MARK --set-mark 29
+done
+
+if (( $NETFILTER_P2P ))
+then
+	$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m connmark --mark 29 \
+		-j CONNMARK --restore-mark
+	$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m ipp2p --ipp2p \
+		-j CONNMARK --set-mark 29
+fi
+
+# SSH sets TOS field to 0x0a (Maximize-Throughput and Minimize-Cost) which
+# iptables cannot pick up on.  Search for port 22 and ! Minimize-Delay.
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m tos --tos ! Minimize-Delay \
+	--sport ssh -j MARK --set-mark 28
+$IPTABLES -t mangle -A SHAPER-OUT -p tcp -m tos --tos ! Minimize-Delay \
+	--dport ssh -j MARK --set-mark 28
+
+$IPTABLES -t mangle -A SHAPER-OUT -m mark --mark 0 -p tcp --sport :1024 \
+	-j MARK --set-mark 25 # default for privilaged services
+$IPTABLES -t mangle -A SHAPER-OUT -m mark --mark 0 -p tcp --dport :1024 \
+	-j MARK --set-mark 25 # default for privilaged services
+$IPTABLES -t mangle -A SHAPER-OUT -m mark --mark 0 \
+	-j MARK --set-mark 27 # default for everything un-marked
+
+########## download (20->21)
+# REALTIME bandwidth handling, example is everything from 10.0.0.2
+# $IPTABLES -t mangle -I SHAPER-IN -d 10.0.0.2 -j MARK --set-mark 30
+# $IPTABLES -t mangle -I SHAPER-IN -d 10.0.0.2 -j RETURN
+
+$IPTABLES -t mangle -A SHAPER-IN -p ! tcp \
+	-j MARK --set-mark 20 # non-tcp traffic
+
+$IPTABLES -t mangle -A SHAPER-IN -p tcp -m tcp --tcp-flags ! SYN,RST,ACK ACK \
+	-j MARK --set-mark 20 # 'normal' tcp control flags
+$IPTABLES -t mangle -A SHAPER-IN -p tcp -m tcp --tcp-flags SYN,RST,ACK ACK \
+	-m length --length :128 -m tos --tos ! Normal-Service \
+	-j MARK --set-mark 20 # regular ACK
+
+$IPTABLES -t mangle -A SHAPER-IN -p tcp -m tos --tos Minimize-Delay \
+	-m mark --mark 0 -j MARK --set-mark 20 # low latency traffic
+
+$IPTABLES -t mangle -A SHAPER-IN -p tcp --sport ssh:telnet \
+	-j MARK --set-mark 20 # ssh/telnet
+$IPTABLES -t mangle -A SHAPER-IN -p tcp --dport ssh:telnet \
+	-j MARK --set-mark 20 # ssh/telnet
+
+# SSH sets TOS field to 0x0a (Maximize-Throughput and Minimize-Cost) which
+# iptables cannot pick up on.  Search for port 22 and ! Minimize-Delay.
+$IPTABLES -t mangle -A SHAPER-IN -p tcp -m tos --tos ! Minimize-Delay \
+	--sport ssh -j MARK --set-mark 21
+$IPTABLES -t mangle -A SHAPER-IN -p tcp -m tos --tos ! Minimize-Delay \
+        --dport ssh -j MARK --set-mark 21
+
+for PORT in $FORCE_LOW_PRIORITY; # force traffic into lowest priority bucket
+do
+	$IPTABLES -t mangle -A SHAPER-IN -p tcp --sport $PORT \
+		-j MARK --set-mark 21
+	$IPTABLES -t mangle -A SHAPER-IN -p tcp --dport $PORT \
+		-j MARK --set-mark 21
+done
+
+if (( $NETFILTER_P2P ))
+then
+	$IPTABLES -t mangle -A SHAPER-IN -p tcp -m connmark --mark 21 \
+		-j CONNMARK --restore-mark
+	$IPTABLES -t mangle -A SHAPER-IN -p tcp -m ipp2p --ipp2p \
+		-j CONNMARK --set-mark 21
+fi
+
+$IPTABLES -t mangle -A SHAPER-IN -m mark --mark 0 \
+	-j MARK --set-mark 21 # default for the rest
+################### end packet classification #######################

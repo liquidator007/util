@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo listando info de tarjetas de red \(NICs\)...
+lshw -C network

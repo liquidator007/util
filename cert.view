@@ -1,0 +1,4 @@
+for C in $*
+do
+  openssl rsa -in $C -noout -text
+done

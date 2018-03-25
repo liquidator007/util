@@ -1,0 +1,28 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+#OJO: el socket de mysql lo toma de las opciones de compilacion (comando mysql_config --socket) y no del fichero de configuracion de mysql.
+echo Construyendo mediatomb [svn]...
+ejecutar "apt-get --yes --force-yes install build-essential libmozjs0d libmozjs-dev libsqlite3-dev libtag1-dev libexpat1-dev libexif-dev libmp4v2-dev libmagic-dev libcurl4-openssl-dev mysql-server libmysqlclient-dev"
+#ejecutar "apt-get --yes remove libavformat52"
+
+cd $BUILDPATH
+svn co https://svn.mediatomb.cc/svnroot/mediatomb/trunk/mediatomb mediatomb && \
+cd mediatomb && \
+autoreconf -i && \
+./configure --prefix=/usr/local --with-mysql-cfg=/usr/bin/mysql_config --with-ffmpegthumbnailer-h=/usr/local/include --with-ffmpegthumbnailer-libs=/usr/local/lib --enable-ffmpegthumbnailer --with-libdvdnav && \
+make && \
+#checkinstall --pkgname=mediatomb --pkgversion "1:0.svn`date +%Y%m%d`" --backup=no --default && \
+make install && \
+make distclean && \
+ldconfig
+
+mediatomb --version
+mediatomb --compile-info

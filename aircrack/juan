@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\nUso:\n\t$0 diccionario...\n"
+  exit 1
+fi
+
+PATH=/mnt/live/memory/images/usr.lzm/usr/local/john-1.7.2/:$PATH
+
+DICTS=""
+
+for D in $*
+do
+  if [ -f $D -a -r $D ]
+  then
+	  DICTS="$DICTS $D"
+  fi
+  if [ -d $D -a -r $D ]
+  then
+	  DICTS="$DICTS `ls -1 $D/*` "
+  fi
+done
+
+echo Diccionarios:
+echo $DICTS
+echo
+
+uniq <( cat $DICTS ) > /tmp/dicts.txt
+john -w=/tmp/dicts.txt --rules --stdout

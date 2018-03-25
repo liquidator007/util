@@ -1,0 +1,20 @@
+#!/bin/bash
+
+echo buscando...
+
+for RUTA in $*
+do
+  find $RUTA \( \
+    -iname '*.pdf' \
+    -o -iname '*.avi' \
+    -o -iname '*.doc' \
+    -o -iname '*.odt' \
+    -o -iname '*.rar' \
+    -o -iname '*.zip' \
+    -o -iname '*.tgz' \
+    -o -iname '*.tar.gz' \
+    -o -iname '*.iso' \
+    -o -iname '*.bin' \
+    -o -iname '*.cue' \
+    \) -exec /util/fake.detect {} \;
+done

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#if [ ! \( ! $# -ne 2 -a -d $1 -a ! -z $2 \) ]
+if [ $# -ne 2 -o ! -d $1 -o -z $2 ]		#se requieren dos parametros
+then
+  printf "\n\nUso:\n\t$0 dondebuscar quebuscar\n\n"
+  exit 1
+fi
+
+find -L $1 -type f -exec grep -H $2 {} \;

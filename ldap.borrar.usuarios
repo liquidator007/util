@@ -1,0 +1,1 @@
+for N in `./serie 1 35 1`; do /util/ldap.borrar uid=asi09-$N,ou=asi09,ou=People,dc=iescierva,dc=net; done

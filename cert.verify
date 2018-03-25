@@ -1,0 +1,14 @@
+if [ $# -ne 1 ]
+then
+  printf "\n\nUso:\n\t$0 { cert-p12 | cert-crt }\n\n"
+  printf "(la CA debe estar instalada con c_rehash)\n\n\n"
+  exit 1
+fi
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+ejecutar "openssl verify $1"

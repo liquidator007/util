@@ -1,0 +1,73 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+echo Construyendo ffmpeg [svn]...
+ejecutar "apt-get --yes install libfaac-dev libfaad-dev libtheora-dev libxv-dev libxvmc-dev libgsm1-dev libschroedinger-dev libvorbis-dev libdc1394-22-dev"
+
+ejecutar "apt-get --yes remove ffmpeg libavutil-dev libavutil-extra-49 libavcodec-extra-52"
+
+#Buscará esto...
+#ln -s /usr/local/lib/libx264.so.88 /usr/lib/libx264.so.67
+
+cd $BUILDPATH 
+rm -rf ffmpeg 
+git clone git://source.ffmpeg.org/ffmpeg.git ffmpeg 
+cd ffmpeg 
+
+#svn checkout svn://svn.ffmpeg.org/ffmpeg/trunk ffmpeg && \
+
+#se generan las librerias: libavdevice, libavformat, libavcodec, libswscale
+#Borrar los posibles restos viejos que luego dan problemas
+
+#MUY RADICAL, a veces los programas siguen necesitando las viejas
+
+#LIBRERIAS="libavdevice libavformat libavcodec libswscale"
+#RUTAS="/usr/lib /usr/local/lib /usr/include /usr/local/include"
+#for R in $RUTAS
+#do
+#  for L in $LIBRERIAS
+#  do
+#    ejecutar "rm -rf $R/$L*"
+#  done
+#done
+
+#OJO, algunos de estos switches rompen la compilacion de ffmpegthumbnailer
+#--enable-shared necesario para mediatomb, aunque no parece gustar a ffmpegthumbnailer
+
+# Opciones problematicas de configure:
+	#--libdir=/usr/lib	#esto da problemas al compilar ffmpegthumbnailer 
+
+#Se necesita enable-shared para compilar luego vlc
+./configure --prefix=/usr/local  \
+  --enable-shared --disable-static \
+  --enable-nonfree --enable-gpl --enable-version3 --enable-pthreads \
+  --enable-libfaac \
+  --enable-libnut \
+  --enable-libmp3lame \
+  --enable-libopencore-amrnb --enable-libopencore-amrwb \
+  --enable-avfilter  \
+  --enable-libtheora \
+  --enable-libx264 \
+  --enable-libxvid \
+  --enable-zlib --enable-bzlib \
+  --enable-postproc  --enable-libdc1394 --enable-libgsm --enable-libschroedinger \
+  --disable-stripping \
+  --enable-libvorbis --enable-x11grab && \
+make && \
+ejecutar "apt-get --yes remove ffmpeg libavcodec52 libavcodec-unstripped-52" 
+
+#sudo checkinstall --pkgname=ffmpeg --pkgversion "4:0.5+svn`date +%Y%m%d`" --backup=no \
+
+sudo checkinstall --pkgname=ffmpeg --pkgversion "4:0.5+svn`date +%Y%m%d`" --backup=no \
+	--provides="libavcodec52,libavformat52,libavdevice52,libswscale0,libavcodec-extra-52" \
+        --default --strip=no --stripso=no && \
+make distclean 
+
+ldconfig

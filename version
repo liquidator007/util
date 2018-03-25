@@ -1,0 +1,12 @@
+#!/bin/sh
+
+CMD=`basename $0`
+
+if [ $# -ne 1 ]
+then
+  printf "Uso:\n\n\t$CMD paquete\n\n"
+  exit 1
+fi
+
+A=`grep "^$1:" /util/paquetes.dat | cut -d: -f2`
+eval $A

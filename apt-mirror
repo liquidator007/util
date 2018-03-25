@@ -1,0 +1,49 @@
+#!/bin/bash
+
+trap "parar" 9 15
+
+parar()
+{
+  echo "Interrumpido"
+  exit 1
+}
+
+LCK=/var/spool/apt-mirror/var/apt-mirror.lock
+
+if [ -r "$LCK" ]
+then
+  #look for stale locks
+  echo "detectado lock $LCK..."
+  DES=`ps ax | grep wget | grep apt-mirror`
+  NUM=`ps ax | grep wget | grep apt-mirror | wc -l`
+  if [ "$NUM" -eq 0 ]
+  then
+    echo "No hay descargas en curso, eliminando lock antiguo $LCK..."
+    rm -f "$LCK"
+  else
+    echo "hay un lock activo ($LCK) y $NUM descargas en curso:"
+    printf "$DES"
+    printf "\n\nsaliendo...\n"
+    exit 1
+  fi
+fi
+
+touch "$LCK"
+
+export WGETRC=/root/.wgetrc
+
+echo "Ejecutando apt-mirror..."
+/usr/bin/apt-mirror
+
+echo "Ejecutando clean.sh..."
+/var/spool/apt-mirror/var/clean.sh
+
+echo "solucionando problemas con archive.canonical.com..."
+/util/apt-mirror.fix.archive.canonical.com
+
+echo "Eliminando $LCK..."
+rm -f "$LCK"
+
+date
+
+echo "fin"

@@ -1,0 +1,1 @@
+find / -name core -exec rm -f {} \; >/dev/null 2>&1 &

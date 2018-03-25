@@ -1,0 +1,393 @@
+#!/bin/sh
+#Configuracion firewall
+
+#NOTA: QUIZA (y solo quiza) se podria alterar el orden en las cadenas
+#INPUT, FORWARD para subir la aceptacion de STABLISHED, RELATED, antes
+#que comprobar portscanners y demas (ahora se insertan con -I)
+
+stop()
+{
+#Vaciado de cadenas
+$I -t filter -F
+$I -t nat -F
+$I -t mangle -F
+$I -X   #Borrado de las cadenas de usuario
+$I -P INPUT ACCEPT
+$I -P FORWARD ACCEPT
+$I -P OUTPUT ACCEPT
+}
+
+start()
+{
+#CARGA DE MODULOS - IMPORTANTE
+modprobe ip_conntrack_ftp
+
+#Vaciado de cadenas
+$I -t filter -F
+$I -t nat -F
+$I -t mangle -F
+$I -X   #Borrado de las cadenas de usuario
+
+#exit
+
+######################################################################
+# Informacion general
+######################################################################
+
+#Instituto: interfaces implicados y su direccion IP
+#eth0: dmz      : 172.20.254.103
+#eth1: aula B21 : 172.20.221.103
+#eth2: aula B22 : 172.20.222.103
+#eth3: aula B24 : 172.20.222.103
+#eth4: aula B25 : 172.20.225.103
+#eth5: Principal: 172.20.20.103 (enruta dpto, sanitaria, administrativo...)
+
+#Casa
+#eth0: internet  : 81.203.101.X (por DHCP, así que algo parecido...)
+#eth1: casa      : 192.168.0.1
+
+######################################################################
+# Parametros globales
+######################################################################
+
+EXT=eth0        #Interfaz externo (hacia el router)
+LOC=lo          #Interfaz loopback
+DEFAULT=DROP	#Politica por omision. Puede ser ACCEPT o DROP
+
+#Servidores de dominio. Como no se los puertos, abiertos sin limitaciones
+WINSERVERS="172.20.20.120 172.20.20.121 172.20.20.110"
+
+#Maquinas o redes sin restricciones
+#OJO CON LOS SISTEMAS ABIERTOS. Si estan infectados con netsky o similares
+#aparecemos en la lista de spammers CBL. Como norma general NO ABRIR sist.windows
+ABIERTO="172.20.221.100 172.20.222.100 172.20.254.106 $WINSERVERS"
+#ABIERTO="$WINSERVERS"
+
+PROXY_TRANSPARENTE_HTTP=3128
+PROXY_TRANSPARENTE_FTP=2121
+NAT=1		#Si =lo que sea, se activa MASQUERADE
+DROPLOG=	#Registrar lo no aceptado?
+CHAINLOG=	#Registrar el paso por las subcadenas
+
+#Si salen peticiones a la IP publica, redirigirlas al servidor
+IP_PUBLICA=80.33.77.161		#IP del router en Internet
+IP_PRIVADA=127.0.0.1		#
+PUERTOS_RECAPTURA="9000"
+
+######################################################################
+# Puertos Permitidos
+######################################################################
+
+#Puertos especiales
+#20	ftp-data
+#21	ftp
+#25	smtp
+#465	ssmtp
+#901 	samba swat
+#3306 	mysql
+#4001	eMule-gui
+#6347	G2
+#6346	Gnutella
+#1214	FastTrack
+#2234	SoulSeek
+#6699	OpenNapster
+#6682	BitTorrent
+#8081	vnc
+#9000	http
+#9999	asearch
+#10000	webmin
+#4662/TCP y 4666/UDP 4672/UDP mldonkey
+
+P2P_TCP="4001 4662 6346 6347 1214 2234 6699 6682"
+P2P_UDP="4001 4666 4672 6346 6347 1214 2234 6699 6682"
+
+#Puertos destino (TCP) accesibles desde el exterior a linux
+TCP_EXT_LIN="http 21 20 domain ssh 25 pop3 119 netbios-ns netbios-dgm netbios-ssn microsoft-ds imap imap3 465 imaps pop3s 3306 3128 901 8081 9999 10000 "$P2P_TCP
+
+#Puertos destino (UDP) accesibles desde el exterior a linux
+UDP_EXT_LIN="21 20 25 domain netbios-ns netbios-dgm netbios-ssn 119 microsoft-ds imap imap3 imaps 465 3306 3128 901 4001 4661 4662 4666 4672 10000 "$P2P_UDP
+
+#Puertos destino (TCP) accesibles desde el interior al exterior
+TCP_INT_EXT="ssh nicname https pop3 pop3s imap imap3 imaps 119"
+#Puertos destino (UDP) accesibles desde el interior al exterior
+UDP_INT_EXT="domain 119"
+
+
+#Politicas por defecto aconsejables
+
+$I -P INPUT $DEFAULT
+$I -P FORWARD $DEFAULT
+$I -P OUTPUT $DEFAULT
+
+$I -t nat -P PREROUTING ACCEPT
+$I -t nat -P POSTROUTING ACCEPT
+$I -t nat -P OUTPUT ACCEPT
+
+$I -t mangle -P PREROUTING ACCEPT
+$I -t mangle -P OUTPUT ACCEPT
+
+#Creacion de nuevas cadenas
+$I -N int_lin	#del interior (red privada) a esta maquina linux
+$I -N lin_int	#de esta maquina al interior
+$I -N ext_lin	#del exterior (internet) a esta maquina
+$I -N lin_ext	#de esta maquina al exterior
+$I -N int_ext	#del interior al exterior
+$I -N ext_int	#del exterior al interior
+$I -N int_int	#del interior al interior
+$I -N synflood	
+$I -N pingdeath
+$I -N portscan
+$I -N newnotsyn
+if [ $DROPLOG ]
+then
+  $I -N droplog
+fi
+
+######################################################################
+# Reglas generales
+######################################################################
+#Destinos: ACCEPT, DROP, QUEUE, RETURN
+
+#Recaptura
+#for P in $PUERTOS_RECAPTURA
+#do
+#  $I -t nat -A PREROUTING -p tcp --dport $P -d $IP_PUBLICA  \
+#         -j DNAT --to-destination $IP_PRIVADA:$P
+#done
+
+
+if [ $NAT ]
+then
+  $I -t nat -A POSTROUTING -o $EXT -j MASQUERADE
+fi
+
+#Proxy transparente HTTP (squid)
+if [ $PROXY_TRANSPARENTE_HTTP ]
+then
+  $I -t nat -A PREROUTING -i ! $EXT -p tcp --dport 80 \
+	-j REDIRECT --to-port $PROXY_TRANSPARENTE_HTTP
+fi
+
+#Proxy transparente FTP (frox)
+if [ $PROXY_TRANSPARENTE_FTP ]
+then
+  $I -t nat -A PREROUTING -i ! $EXT -p tcp --dport 21 \
+	-j REDIRECT --to-port $PROXY_TRANSPARENTE_FTP
+fi
+
+#
+#Ataques DoS (unidades: /second, /minute, /hour o /day, o abreviaturas)
+#
+
+#anti inundacion syn (syn-flood)
+$I -I INPUT 1 -i ! $LOC -p tcp --tcp-flags SYN,RST,ACK SYN  -j synflood
+$I -A synflood -m limit --limit 60/s --limit-burst 150 -j RETURN
+$I -A synflood -j LOG --log-level info --log-prefix "iptables:synflood:"
+$I -A synflood -j DROP
+
+#anti ping de la muerte (ping of death)
+$I -I INPUT 1 -p icmp --icmp-type echo-request -j pingdeath
+$I -I FORWARD 1 -p icmp --icmp-type echo-request -j pingdeath
+
+$I -A pingdeath	-m limit --limit 10/s --limit-burst 50 -j RETURN
+$I -A pingdeath -j LOG --log-level info --log-prefix "iptables:pingdeath:"
+$I -A pingdeath -j DROP
+
+#anti busqueda furtiva de puertos (port scanner)
+$I -I INPUT 1 -p tcp --tcp-flags SYN,ACK,FIN,RST RST -j portscan
+$I -I FORWARD 1 -p tcp --tcp-flags SYN,ACK,FIN,RST RST -j portscan
+
+$I -A portscan -m limit --limit 60/s --limit-burst 120 -j RETURN
+$I -A portscan -j LOG --log-level info --log-prefix "iptables:portscan:"
+$I -A portscan -j DROP
+
+#Aceptar en entrada (cualquiera) y reenvio (cualquiera) todo lo que se ha pedido
+$I -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+$I -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+#Aceptar todo el trafico desde/hacia interfaz local
+$I -A INPUT -i $LOC -j ACCEPT
+$I -A OUTPUT -o $LOC -j ACCEPT
+
+#Controles MAC ADDR
+#$I -A FORWARD -p tcp -m mac --mac-source 00:11:22:33:44:55 -j ACCEPT
+
+#Descartar paquetes de inicio de sesion que no sean SYN, y registrar
+$I -A INPUT -p tcp ! --syn -m state --state NEW -j newnotsyn
+$I -A newnotsyn -j LOG --log-level info --log-prefix "iptables:Nuevo_no_syn:"
+#$I -A newnotsyn -j DROP
+$I -A newnotsyn -j RETURN
+
+#Aceptar sistemas de trafico abierto
+for IP in $ABIERTO
+do
+  $I -A INPUT -s $IP -j ACCEPT
+  $I -A OUTPUT -d $IP -j ACCEPT
+  $I -A FORWARD -s $IP -j ACCEPT
+  $I -A FORWARD -d $IP -j ACCEPT
+done
+
+######################################################################
+# Reglas de derivacion a las subcadenas
+######################################################################
+
+#Reenvios
+
+$I -A FORWARD -i $EXT -o ! $EXT -j ext_int	#Forward desde el ext al int
+$I -A FORWARD -i ! $EXT -o $EXT -j int_ext	#Forward desde el int al ext
+$I -A FORWARD -i ! $EXT -o ! $EXT -j int_int	#Forward interior
+
+#Entradas
+$I -A INPUT -i $EXT -j ext_lin		#Input desde el exterior
+$I -A INPUT -i ! $EXT -j int_lin	#Input desde el interior
+
+#Salidas
+$I -A OUTPUT -o $EXT -j lin_ext		#Output al exterior
+$I -A OUTPUT -o ! $EXT -j lin_int	#Output al interior
+
+######################################################################
+# Entradas desde el exterior
+######################################################################
+
+$I -A ext_lin -m state --state ESTABLISHED,RELATED -j ACCEPT
+$I -A ext_lin -p icmp -j ACCEPT 
+$I -A ext_lin -p 56 -j ACCEPT 		#tlsp (transport layer security)
+
+for P in $TCP_EXT_LIN
+do
+  $I -A ext_lin -p TCP --dport $P -j ACCEPT
+done
+
+for P in $UDP_EXT_LIN
+do
+  $I -A ext_lin -p UDP --dport $P -j ACCEPT
+done
+
+if [ $CHAINLOG ]
+then 
+  $I -I ext_lin -j LOG --log-level info --log-prefix "iptables_debug:ext_lin:"
+fi
+
+######################################################################
+# Entradas desde el interior
+######################################################################
+
+if [ $CHAINLOG ]
+then 
+  $I -I int_lin -j LOG --log-level info --log-prefix "iptables_debug:int_lin:"
+fi
+$I -A int_lin -j ACCEPT
+
+######################################################################
+# Salidas hacia el interior
+######################################################################
+
+$I -A lin_int -j ACCEPT
+
+if [ $CHAINLOG ]
+then 
+  $I -I lin_int -j LOG --log-level info --log-prefix "iptables_debug:lin_int:"
+fi
+
+######################################################################
+# Salidas hacia el exterior
+######################################################################
+
+$I -A lin_ext -j ACCEPT
+
+if [ $CHAINLOG ]
+then 
+  $I -I lin_ext -j LOG --log-level info --log-prefix "iptables_debug:lin_ext:"
+fi
+
+######################################################################
+# Reenvios del exterior al interior
+######################################################################
+
+$I -A ext_int -m state --state ESTABLISHED,RELATED -j ACCEPT
+$I -A ext_int -p icmp -j ACCEPT 
+
+if [ $CHAINLOG ]
+then 
+  $I -I ext_int -j LOG --log-level info --log-prefix "iptables_debug:ext_int:"
+fi
+
+######################################################################
+# Reenvios del interior al interior
+######################################################################
+
+$I -A int_int -j ACCEPT
+
+if [ $CHAINLOG ]
+then 
+  $I -I int_int -j LOG --log-level info --log-prefix "iptables_debug:int_int:"
+fi
+
+######################################################################
+# Reenvios del interior al exterior
+######################################################################
+
+$I -A int_ext -m state --state ESTABLISHED,RELATED -j ACCEPT
+$I -A int_ext -p icmp -j ACCEPT
+$I -A int_ext -p 56 -j ACCEPT
+
+for P in $TCP_INT_EXT
+do
+  $I -A int_ext -p TCP --dport $P -j ACCEPT
+done
+
+for P in $UDP_INT_EXT
+do
+  $I -A int_ext -p UDP --dport $P -j ACCEPT
+done
+
+if [ $CHAINLOG ]
+then 
+  $I -I int_ext -j LOG --log-level info --log-prefix "iptables_debug:int_ext:"
+fi
+
+######################################################################
+# Reglas finales
+######################################################################
+
+if [ $DROPLOG ]
+then
+  $I -A INPUT -j droplog
+  $I -A FORWARD -j droplog
+  $I -A OUTPUT -j droplog
+  $I -A droplog -j LOG --log-level info --log-prefix "iptables:no_aceptado:"
+fi
+
+######################################################################
+# Otras Reglas
+######################################################################
+
+#$I -A fw_int -d 204.152.188.7 -j ACCEPT     #PRUEBAS
+#$I -A fw_int -d 213.193.17.3 -j ACCEPT      #PRUEBAS
+#$I -A fw_int -d 12.21.210.234 -j ACCEPT     #PRUEBAS
+#$I -A fw_int -d www.samba.org -j ACCEPT     #PRUEBAS
+#$I -A fw_int -d samba.sourceforge.net -j ACCEPT     #PRUEBAS
+}
+
+PATH=/sbin:/usr/local/sbin:$PATH
+I=iptables
+if [ $# -eq 0 ]
+then
+  echo "$0 {start | stop | restart | status}"
+  exit 1
+else
+  case "$1" in
+    start) start
+    ;;
+    stop)  stop
+    ;;
+    restart)
+    	stop
+	start
+    ;;
+    status)
+	$I --list
+    ;;
+  esac
+fi
+

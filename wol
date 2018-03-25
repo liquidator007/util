@@ -1,0 +1,39 @@
+#!/bin/bash
+
+DATA=/util/wol.data
+RETRY=3
+DELAY=0.5
+PORT=9		#'discard' port
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso:\n\t$0 patron...\n\npatron: se busca en /util/wol.data\n\n"
+  exit 1
+fi
+
+for P in $*
+do
+  X=`grep $P $DATA`
+  for Y in $X
+  do
+    IP=`cut -d';' -f1 <<!
+$Y
+!
+`
+    MAC=`cut -d';' -f2 <<!
+$Y
+!
+`
+echo
+echo sudo wakeonlan -p $PORT -i $IP $MAC     $RETRY veces...
+
+let N=$RETRY
+while [ $N -gt 0 ]
+do
+  sudo wakeonlan -p $PORT -i $IP $MAC
+  let N=$N-1
+  sleep $DELAY
+done
+done
+done
+

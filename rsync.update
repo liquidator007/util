@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#actualiza el destino solamente si le llegan del origen ficheros mas nuevos 
+
+CMD=`basename $0`
+
+if [ $# -lt 2 -o $# -gt 3 ]
+then
+	printf "\nUso:\n\t$CMD origen destino [ssh-priv-key]\n\n"
+	exit 1
+fi
+
+if [ -z $3 ]
+then
+  CERT=~/.ssh/`whoami`
+else
+  CERT=$3
+fi
+
+if [ ! -f $CERT ]
+then
+  printf "Clave privada ssh no encontrada (en $CERT)\n\n"
+  SSH=""
+else
+  SSH="ssh -i $CERT"
+  SSH="'"$SSH"'"
+  SSH="-e $SSH"
+fi
+
+
+X="rsync --archive --compress --verbose --update $SSH $1 $2"
+echo Ejecutando la orden: $X
+/bin/bash<<!
+$X
+!
+

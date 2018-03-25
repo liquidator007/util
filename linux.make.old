@@ -1,0 +1,74 @@
+#!/bin/bash
+LINUXDIR=/usr/src/linux
+ACTUALDIR=$PWD
+
+#M=/lib/modules/`uname -r`
+#printf "\n\n\n\aBorrando módulos en $M...\n"
+#rm -rf $M
+
+printf "\n\n\n\aCambiando al directorio %s...\n" $LINUXDIR
+cd $LINUXDIR
+if [ $? -ne 0 ]
+then
+	printf "\aError en fase: "
+	printf "Cambiando al directorio %s...\n" $LINUXDIR
+	exit 1
+fi 
+
+printf "\n\n\n\aRegenerando fichero de dependencias (make dep)...\n"
+make dep
+if [ $? -ne 0 ]
+then
+	printf "\aError en fase: "
+	printf "Regenerando fichero de dependencias (make dep)...\n"
+	exit 1
+fi 
+
+printf "\n\n\n\aLimpiando viejos ficheros (make clean)...\n"
+make clean
+if [ $? -ne 0 ]
+then
+	printf "\aError en fase: "
+	printf "Limpiando viejos ficheros (make clean)...\n"
+	exit 1
+fi 
+
+printf "\n\n\n\aCreando kernel e instalando /vmlinuz en lilo (make bzlilo)...\n"
+#make bzImage
+make bzlilo
+if [ $? -ne 0 ]
+then
+	printf "\aError en fase: "
+	printf "Creando kernel e instalando /vmlinuz en lilo (make bzlilo)...\n"
+	exit 1
+fi 
+
+printf "\n\n\n\aCompilando modulos cargables (make modules)...\n"
+make modules
+if [ $? -ne 0 ]
+then
+	printf "\aError en fase: "
+	printf "Compilando modulos cargables (make modules)...\n"
+	exit 1
+fi 
+
+printf "\n\n\n\aInstalando modulos cargables (make modules_install)...\n"
+make modules_install
+if [ $? -ne 0 ]
+then
+	printf "\aError en fase: "
+	printf "Instalando modulos cargables (make modules_install)...\n"
+	exit 1
+fi
+
+printf "\n\n\n\aVolviendo al directorio directorio %s...\n" $ACTUALDIR
+cd $ACTUALDIR
+if [ $? -ne 0 ]
+then
+	printf "\aError en fase: "
+	printf "Volviendo al directorio directorio %s...\n" $ACTUALDIR
+	exit 1
+else
+	printf "OK!!!\n"
+fi 
+

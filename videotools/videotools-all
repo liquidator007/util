@@ -1,0 +1,30 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+VIDEOTOOLS_DIR=/util/videotools
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+if [ `whoami` != "root" ]
+then
+  echo Eres `whoami`, no root. Adios. Vuelve cuando seas root.
+  exit 1
+fi
+
+cd $VIDEOTOOLS_DIR
+
+for C in ./videotools-[0-9][0-9][0-9]-*
+do
+  echo '*****************************************************************************************************************************'
+  ejecutar "$C"
+  RET=$?
+  if [ $RET -ne 0 ]
+  then
+    echo $C termino con error retval=$RET
+    exit $RET
+  fi
+done

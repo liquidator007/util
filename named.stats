@@ -1,0 +1,4 @@
+#!/bin/sh
+
+rndc stats
+cat /var/run/named/named.stats

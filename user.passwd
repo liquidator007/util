@@ -1,0 +1,24 @@
+#!/bin/sh
+if [ $# -ne 2 ]
+then
+  printf "Uso:\n\t$0 usuario clave\n\n"
+  exit 1
+fi
+
+DIR=`pwd`
+
+#pwconv	#Crear /etc/shadow con la información de claves de /etc/passwd
+(sleep 1; echo $2; sleep 1; echo $2) | passwd $1
+if [ $? -ne 0 ] #hubo error
+then
+  pwunconv
+  exit 1
+fi
+
+#pwunconv	#Pasar las claves otra vez a /etc/passwd
+cd /var/yp	#borrar de B.D. NIS/YP
+make
+cd $DIR		#Volver al dir. por omision
+
+echo "Información NIS/YP de clave de usuario modificada:"
+ypcat passwd | grep $1

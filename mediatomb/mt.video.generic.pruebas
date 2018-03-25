@@ -1,0 +1,20 @@
+#!/bin/bash
+INPUT="$1"
+OUTPUT="$2"
+VIDEO_CODEC="-vcodec mpeg2video"
+VIDEO_BITRATE="-b 4096k"
+#AUDIO_CODEC="-acodec mp2"
+#AUDIO_BITRATE="-ab 192k"
+AUDIO_BITRATE="-ab 128k"
+AUDIO_SAMPLERATE="-ar 48000"
+AUDIO_CHANNELS="-ac 2"
+FORMAT="-f dvd"
+MAP="-map 0:0 -map 0:1 -map 0:2 -newaudio"	# poner -newaudio tras cada pista de audio excepto la primera, sus parámetros (ej. -ab) antes
+#SIZE="-s 720x576"
+#FPS="-r 25"
+
+#compilación local de ffmpeg
+/usr/local/bin/ffmpeg -threads 2 -i "${INPUT}" "${OUTPUT}" ${VIDEO_CODEC} ${VIDEO_BITRATE} ${SIZE} ${FPS} \
+    ${FORMAT} -\
+    ${AUDIO_CODEC} ${AUDIO_BITRATE} ${AUDIO_SAMPLERATE} ${AUDIO_CHANNELS} \
+    ${AUDIO_CODEC} ${AUDIO_BITRATE} ${AUDIO_SAMPLERATE} ${AUDIO_CHANNELS} 

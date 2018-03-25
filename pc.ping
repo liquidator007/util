@@ -1,0 +1,13 @@
+#!/bin/bash
+
+while read PC
+do
+  DNS=$(dig +short -x $PC)
+  ping -c 5 -i 0.1 $PC >/dev/null 2>&1
+  if [ $? -eq 0 ]
+  then
+    echo $PC $DNS is alive!
+  else
+    echo $PC $DNS ...
+  fi
+done

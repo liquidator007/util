@@ -1,0 +1,21 @@
+#!/bin/bash
+
+if [ $# -lt 2 ]
+then
+  printf "\nUso:\n\t$0 origen... destino\n\n"
+  exit 1
+fi
+
+TMP=salida.juntar.ts
+
+rm -f $TMP
+
+while [ $# -gt 1 ]
+do
+  echo Anexando $1 a $TMP...
+  cat $1 >> $TMP
+  shift
+done
+
+echo moviendo $TMP a $1...
+mv $TMP $1

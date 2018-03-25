@@ -1,0 +1,8 @@
+/etc/init.d/mediatomb stop 
+cd /var/lib/mediatomb 
+sqlite3 mediatomb.db <<!
+update mt_cds_object set mime_type = 'video/divx' where mime_type = 'video/x-msvideo'; 
+.exit 
+!
+sleep 3
+/etc/init.d/mediatomb start

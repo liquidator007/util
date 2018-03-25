@@ -1,0 +1,2 @@
+echo l1nux
+ssh -oKexAlgorithms=+diffie-hellman-group1-sha1      root@172.20.254.10

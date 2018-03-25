@@ -1,0 +1,13 @@
+#!/bin/sh
+
+if [ $# -eq 0 ]
+then
+  rpm -qa --filesbypkg
+else
+  for P in $*
+  do
+    echo
+    echo "Listado de ficheros en $P:"
+    rpm -q --filesbypkg $P 
+  done
+fi

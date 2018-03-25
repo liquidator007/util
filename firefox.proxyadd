@@ -1,0 +1,6 @@
+#!/bin/bash
+
+grep -v proxy "${1}" > "${1}.tmp"
+cat /var/www/prefs.js >> "${1}.tmp"
+
+mv -f "${1}.tmp" "${1}"

@@ -1,0 +1,2 @@
+echo "Borrar grupos"
+groupdel $*

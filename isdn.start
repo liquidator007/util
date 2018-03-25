@@ -1,0 +1,36 @@
+#!/bin/sh
+
+#Script de conexion ISDN 1 canal
+
+LOCAL_NUMBER="968330094"
+REMOTE_NUMBER="968557000"
+
+LOCAL_IP="195.76.154.169"	#IP falsa. Se establecerá luego
+
+DEVICE="ippp0"
+USER="IESBOHIO@teleline1"
+#USER="MIBANEZM@telelineb"
+
+/bin/echo Inicializando ippp0...
+/bin/isdnctrl addif $DEVICE			#Crea el interfaz ippp
+/bin/isdnctrl addphone $DEVICE out $REMOTE_NUMBER	#Numero al que llamar
+/bin/isdnctrl eaz $DEVICE $LOCAL_NUMBER	#EAZ: El número de la RDSI
+/bin/isdnctrl l2_prot $DEVICE hdlc		#para ppp sincrono
+/bin/isdnctrl l3_prot $DEVICE trans		#
+/bin/isdnctrl encap $DEVICE syncppp		# encapsulacion IP en PPP
+#OJO: Si no se fija "huptimeout" se establece automáticamente a 10 segundos
+/bin/isdnctrl huptimeout $DEVICE 300000	# desconectar en x segundos inact.
+/bin/isdnctrl chargehup $DEVICE off		# colgar antes de siguiente paso
+/bin/isdnctrl secure $DEVICE on		# Aceptar llamadas de num.autorizados
+/sbin/ifconfig $DEVICE $LOCAL_IP
+/bin/echo  Añadiendo ruta...
+/sbin/route add -net 195.76.154.0 netmask 255.255.255.0 dev $DEVICE
+/bin/echo  Configurando ruta por omisión...
+/sbin/route add default $DEVICE
+
+/bin/echo  Ejecutando ipppd...
+/bin/ipppd user $USER remotename infovia -d defaultroute noipdefault \
+ipcp-accept-local ipcp-accept-remote mru 1500 mtu 1500 lock -bsdcomp \
+-pc -ac /dev/ippp0 &
+/etc/rc.d/init.d/squid stop
+/etc/rc.d/init.d/squid start

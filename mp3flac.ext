@@ -1,0 +1,10 @@
+gawk -v F="$*" '
+function ltrim(s) { sub(/^[ \t\r\n]+/, "", s); return s }
+function rtrim(s) { sub(/[ \t\r\n]+$/, "", s); return s }
+function trim(s) { return rtrim(ltrim(s)); }
+	BEGIN {
+	IGNORECASE=1
+	EXT = tolower(trim(gensub(/.+\.(mp3|ogg|flac|wav)/, "\\1", "g", F)))
+	print EXT
+	}
+'

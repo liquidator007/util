@@ -1,0 +1,35 @@
+#!/bin/bash
+
+if [ $# -ne 2 ]
+then
+  printf "\n\nUso:\n\t$0 certificado ca\n\n"
+  exit 1
+fi
+
+BASE=/certs/ca
+
+C=$1
+CA=$2
+
+if [ ! -z "$CA" ]
+then
+  CNF_CMD="-config ./conf/openssl.cnf"
+  KEY=./private/root.pem
+  CERT=./signed-keys/$C
+  cd $BASE/$CA
+else
+  CNF_CMD=""
+  KEY=$C.key
+  CERT=$C.crt
+fi
+
+echo Revocando...
+openssl ca $CNF_CMD -revoke $CERT -key $KEY
+
+exit 0
+
+echo Generando CRL \(Certificate Revocation List\)...
+
+openssl ca $CNF_CMD -gencrl -out ca-crl.pem -keyfile $KEY
+
+echo No olvide poner el fichero ca-crl.pem en el servidor Web

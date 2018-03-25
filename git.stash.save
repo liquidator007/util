@@ -1,0 +1,11 @@
+#!/bin/bash
+
+#salvagiardia de los cambios desde el ultimo commit
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUso:\n\t$0 msg\n\n"
+  exit 1
+fi
+
+git stash save "$1"

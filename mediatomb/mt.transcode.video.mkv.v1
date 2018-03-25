@@ -1,0 +1,13 @@
+#!/bin/bash
+
+FFMPEG_PATH="/usr/bin/ffmpeg"
+INPUT="$1"
+OUTPUT="$2"
+VIDEO_CODEC="mpeg2video"
+VIDEO_BITRATE="4096k"
+VIDEO_FRAMERATE="25"
+AUDIO_CODEC="copy"
+FORMAT="mpegts"
+
+exec "${FFMPEG_PATH}" -i "${INPUT}" -vcodec ${VIDEO_CODEC} -b ${VIDEO_BITRATE} \
+-r ${VIDEO_FRAMERATE} -acodec ${AUDIO_CODEC} -f ${FORMAT} - > "${OUTPUT}"

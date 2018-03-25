@@ -1,0 +1,64 @@
+#!/bin/bash
+#descarga del BORM del año indicado
+
+PATH=$PATH:/util:/bin:/usr/bin
+
+export http_proxy=http://127.0.0.1:3128
+export ftp_proxy=http://127.0.0.1:3128
+
+MIRROR=/var/spool/mirrors
+BORMS=$MIRROR/www.carm.es/borm/borm_lib/pdf
+
+ERRORES=0
+MAX_ERRORES=3
+C=`basename $0`
+LOG=/tmp/$C.log
+
+if [ $# -ne 1 ]
+then
+  printf "\nUso:\n\t$C <año>\n\n"
+  exit 1
+fi
+
+logger "$0: `date`"
+date >$LOG
+let MIN=1		#Descargar desde el primer numero
+let MAX=366		#Por si se publica todos los dias
+
+for NUM in `serie $MIN $MAX 1`
+do
+  ANIO=$1
+  N=$NUM-$ANIO.pdf
+
+  echo "Descargando el fichero: $N"
+  (wget --mirror --passive-ftp --wait=10 --random-wait --follow-ftp \
+     --continue --proxy=on --directory-prefix=$MIRROR \
+     http://www.carm.es/borm/borm_lib/pdf/$N 2>&1) | tee -a $LOG | grep "404.*Not Found"
+
+  if [ $? -eq 0 ]	#not found
+  then
+    logger "$0: Error descargando $N"
+    let ERRORES=ERRORES+1
+    echo "ERRORES=$ERRORES"
+  else
+    cd $BORMS
+    for B in *-????.pdf
+    do
+      A=`cut -f2 -d'-' <(echo $B)`	#quitar el nº de boletin
+      A=`cut -f1 -d'.' <(echo $A)`	#quitar extension, queda el año
+      mkdir -p $A 2>/dev/null
+      chown -R www.www $B
+      chmod -R 755 $B
+      mv $B $A     
+      touch --date="$A-01-01 12:00pm" $A
+    done
+    cd -
+  fi
+
+  if [ $ERRORES -ge $MAX_ERRORES ]
+  then
+    echo "Se ha excedido el limite de $MAX_ERRORES errores. Fin."
+    exit 1
+  fi
+done
+

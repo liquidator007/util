@@ -1,0 +1,1 @@
+kismet -f /mnt/sda6/etc/kismet/kismet.conf

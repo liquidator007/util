@@ -1,0 +1,20 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+echo Construyendo libnut [svn]...
+cd $BUILDPATH && \
+svn co svn://svn.mplayerhq.hu/nut/src/trunk/ nut && \
+cd nut && \
+sed 's/-Os/-Os -fPIC/g'  < config.mak > config.mak.new && \
+mv config.mak config.mak.sav && \
+mv config.mak.new config.mak && \
+make && \
+sudo checkinstall --pkgname=nut --pkgversion "4:0.5+svn`date +%Y%m%d`" --backup=no --default && \
+make distclean

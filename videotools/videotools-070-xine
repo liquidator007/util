@@ -1,0 +1,55 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+#VERSION_LIB=1.1.17
+#VERSION_UI=0.99.5
+
+VERSION_LIB=1.1.18.1
+VERSION_UI=0.99.6
+VERSION_PLUGIN=1.0.2
+
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+echo Construyendo xine-lib y xine-ui [wget]...
+cd $BUILDPATH
+wget --continue http://sourceforge.net/projects/xine/files/xine-lib/${VERSION_LIB}/xine-lib-${VERSION_LIB}.tar.bz2/download 
+wget --continue http://prdownloads.sourceforge.net/xine/xine-ui-${VERSION_UI}.tar.bz2
+wget --continue http://prdownloads.sourceforge.net/xine/xine-plugin-${VERSION_PLUGIN}.tar.bz2
+
+tar jxvf xine-lib-${VERSION_LIB}.tar.bz2 && \
+tar jxvf xine-ui-${VERSION_UI}.tar.bz2 && \
+tar jxvf xine-plugin-${VERSION_PLUGIN}.tar.bz2
+
+#XINE-LIB
+cd xine-lib-${VERSION_LIB}
+FFMPEG_LIBS="-L/usr/local/lib -lavcodec -lavformat -lavutil"
+./autogen.sh --with-external-ffmpeg
+read
+#./configure --prefix=/usr/local 
+make && \
+sudo checkinstall --pkgname=xine-lib --pkgversion "1:${VERSION_LIB}+svn`date +%Y%m%d`" --backup=no --default && \
+make distclean
+
+#XINE-UI
+cd $BUILDPATH
+cd xine-ui-${VERSION_UI}
+./configure --prefix=/usr/local && \
+make && \
+sudo checkinstall --pkgname=xine-ui --pkgversion "1:${VERSION_UI}+svn`date +%Y%m%d`" --backup=no --default && \
+make distclean
+
+#XINE-PLUGIN
+cd $BUILDPATH
+cd xine-plugin-${VERSION_PLUGIN}
+./configure --prefix=/usr/local && \
+make && \
+sudo checkinstall --pkgname=xine-plugin --pkgversion "1:${VERSION_PLUGIN}+svn`date +%Y%m%d`" --backup=no --default && \
+make distclean
+
+
+ldconfig

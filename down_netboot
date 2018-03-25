@@ -1,0 +1,15 @@
+mkdir -p /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/debian-installer/amd64
+mkdir -p /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/stable/main/installer-i386/current/images/netboot/debian-installer/i386
+mkdir -p /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/testing/main/installer-amd64/current/images/netboot/debian-installer/amd64
+mkdir -p /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/testing/main/installer-i386/current/images/netboot/debian-installer/i386
+
+rsync -avuHE rsync://ftp.us.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/debian-installer/amd64/* /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/debian-installer/amd64/.
+rsync -avuHE rsync://ftp.us.debian.org/debian/dists/stable/main/installer-i386/current/images/netboot/debian-installer/i386/* /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/stable/main/installer-i386/current/images/netboot/debian-installer/i386/.
+rsync -avuHE rsync://ftp.us.debian.org/debian/dists/testing/main/installer-amd64/current/images/netboot/debian-installer/amd64/* /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/testing/main/installer-amd64/current/images/netboot/debian-installer/amd64/.
+rsync -avuHE rsync://ftp.us.debian.org/debian/dists/testing/main/installer-i386/current/images/netboot/debian-installer/i386/* /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/testing/main/installer-i386/current/images/netboot/debian-installer/i386/.
+
+rsync -av /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/debian-installer/amd64/* /tftpboot/images/debian/stable/amd64/.
+rsync -av /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/stable/main/installer-i386/current/images/netboot/debian-installer/i386/* /tftpboot/images/debian/stable/i386/.
+rsync -av /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/testing/main/installer-amd64/current/images/netboot/debian-installer/amd64/* /tftpboot/images/debian/testing/amd64/.
+rsync -av /var/spool/apt-mirror/mirror/ftp.us.debian.org/debian/dists/testing/main/installer-i386/current/images/netboot/debian-installer/i386/* /tftpboot/images/debian/testing/i386/.
+

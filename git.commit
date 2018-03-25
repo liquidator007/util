@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  git commit
+else
+for D in $*
+do
+      cd $D
+      git commit
+done
+fi

@@ -1,0 +1,91 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+
+echo Construyendo vlc [git]...
+
+#los comentados se instalan desde fuente
+#ejecutar "apt-get --yes install vlc"
+#ejecutar "apt-get --yes install cvs build-essential git git-core automake libtool libxcb-shm0-dev"
+#ejecutar "apt-get --yes install libcddb2-dev libzvbi-dev libxcb-xv0-dev libxpm-dev"
+#ejecutar "apt-get --yes build-dep vlc" 
+
+ejecutar "apt-get --yes install libx11-xcb-dev libx11-xcb1 libdbus-1-dev libxcb-xv0-dev"
+ejecutar "apt-get --yes install libraw1394-dev libavc1394-dev libraw1394-11 libavc1394-0 libdvdread-dev libshout-dev libtwolame-dev"
+ejecutar "apt-get --yes install libmad0 libmad0-dev liba52-dev librsvg2-bin librsvg2-dev mozilla-dev libdca-dev libflac-dev libmpeg2-4-dev"
+ejecutar "apt-get --yes install libfribidi-dev libggi-target-x libggi2 libggi2-dev libggimisc2 libggimisc2-dev libjack-dev liblua5.1-0-dev"
+ejecutar "apt-get --yes install libupnp-dev libqt4-dev libprojectm-dev libavahi-client-dev libudev-dev libmtp-dev libgcrypt-dev"
+ejecutar "apt-get --yes install libpulse-dev portaudio19-dev libosso-dev libsqlite-dev mozilla-dev libnotify-dev libdvbpsi4-dev libv4l-dev libcddb2-dev"
+ejecutar "apt-get --yes install libdirac-dev libfluidsynth-dev libzvbi-dev libass-dev  libxml2-dev libsqlite3-dev xulrunner-dev libxpm-dev"
+ejecutar "apt-get --yes install dh-buildinfo quilt iceape-dev libavcodec-dev libavformat-dev libcdio-dev libgnutls-dev libhal-dev libid3tag0-dev libimlib2-dev liblircclient-dev liblivemedia-dev libmatroska-dev libmodplug-dev libmpcdec-dev libncursesw5-dev libpostproc-dev libsdl-image1.2-dev libsmbclient-dev libswscale-dev libtag1-dev libtar-dev libvcdinfo-dev qt4-dev-tools libspeexdsp-dev libxcb-composite0-dev"
+
+#ejecutar "apt-get --yes remove libx264-67 vlc-nox vlc-data libavcodec-dev libavdata-dev"
+ejecutar "apt-get --yes remove libx264-67 vlc vlc-nox vlc-dev libxul-dev libmozjs-dev"
+
+ln -s /usr/src/ffmpeg /usr/src/vlc/extras >/dev/null 2>&1
+ln -s /usr/src/x264 /usr/src/vlc/extras >/dev/null 2>&1
+ln -s /usr/src/live /usr/src/vlc/extras >/dev/null 2>&1
+
+cd $BUILDPATH
+if [ -d vlc ]
+then
+  cd vlc
+  git pull
+else
+  git clone git://git.videolan.org/vlc.git 
+  cd vlc 
+fi
+./bootstrap && \
+mkdir build 2>/dev/null
+cd build && \
+../configure --prefix=/usr/local \
+   --enable-run-as-root \
+   --enable-debug \
+   --enable-dbus-control \
+   --enable-lirc \
+   --enable-live555 \
+   --enable-x264 --with-x264-tree=/usr/src/x264 \
+   --enable-shout --enable-taglib \
+   --enable-vcdx \
+   --enable-realrtsp  \
+   --enable-svg   --enable-dvdread \
+   --enable-dc1394 --enable-dv \
+   --enable-theora --enable-faad \
+   --enable-twolame --enable-real \
+   --enable-flac --enable-tremor \
+   --enable-skins2 --enable-qt4 \
+   --enable-ncurses \
+   --enable-aa --enable-caca \
+   --enable-jack --enable-xosd \
+   --disable-vcdx \
+   --enable-xvideo --enable-sdl \
+   --enable-avcodec --enable-avformat --enable-swscale --enable-mad --enable-libdvbpsi --enable-a52 \
+   --enable-libmpeg2 --enable-dvdnav --enable-faad --enable-vorbis --enable-ogg --enable-theora  \
+   --enable-mkv --enable-freetype --enable-speex  \
+   --disable-lua \
+   --disable-live555 \
+   --enable-alsa --enable-release  > /tmp/videotools-vlc.txt 2>&1
+
+#   --enable-quicktime 
+#   --enable-dirac 
+#   --enable-portaudio
+#   --enable-goom
+#   --enable-fribidi 
+make >> /tmp/videotools-vlc.txt 2>&1
+sudo checkinstall --fstrans=no --install=yes --pakdir "$HOME/Desktop" \
+--maintainer "$USER" --pkgname=vlc --pkgversion "1:0.svn`date +%Y%m%d`-0.0ubuntu1" \
+--backup=no --deldoc=yes --deldesc=yes --delspec=yes --gzman --default 
+#make install && \
+make distclean
+
+sudo ln -s /usr/local/lib/libvlc* /usr/lib/
+sudo ln -s /usr/local/lib/libx264.a /usr/lib/
+sudo ln -s /usr/local/lib/vlc /usr/lib/vlc

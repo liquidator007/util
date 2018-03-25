@@ -1,0 +1,120 @@
+#!/bin/bash
+
+trap "echo Interrumpido!; exit 1" SIGINT SIGTERM SIGKILL
+
+PATH=/usr/local/bin:/usr/bin:$PATH
+
+F_DEF=dvd
+VB_DEF=1500
+AB_DEF=192
+PASOS_DEF=1
+
+USO="
+Transcodificacion de videos a MPEG-2 mediante avconv
+ 
+Sinopsis:
+ $0 opcion...
+ 
+Generic Options:
+ -h, --help                 Mostrar mensaje de ayuda
+ -i, --input                Fichero de entrada a transcodificar
+ -o, --output               Fichero de salida transcodificado (MPEG-2)
+ -t, --target		    Target: dvd, svcd, pal-svcd, ntsc-dvd... (default=$F_DEF)
+ -v, --videobitrate	    Bitrate de video (en kbps) (default=$VB_DEF)
+ -a, --audiobitrate         Bitrate de audio (en kbps) (default=$AB_DEF)
+ -p, --pasos		    Nº de pasos de codificación (1 | 2) (default=$PASOS_DEF)
+ -f, --fps		    cuadros por segundo
+"
+
+if [ $# -lt 2 ]
+then
+  echo "$USO"
+  exit 1 
+fi
+
+LOG=borrame
+
+while [ "$#" -gt "0" ]
+do
+    case "$1" in
+        -i|--input)
+            INPUT="$2"
+            shift; shift;
+            ;;
+        -o|--output)
+            OUTPUT="$2"
+            shift; shift;
+            ;;
+        -t|--target)
+            F="$2"
+            shift; shift;
+            ;;
+        -a|--audio-bitrate)
+            AB=$2
+            shift; shift;
+            ;;
+        -v|--video-bitrate)
+            VB=$2
+            shift; shift;
+            ;;
+        -p|--pasos)
+            PASOS="$2"
+            shift; shift;
+            ;;
+        -f|--fps)
+            FPS="-r $2"
+            shift; shift;
+            ;;
+        -h|--help|*)
+            echo "$USO"
+            echo ERROR: $1
+            exit 1
+            ;;
+    esac
+done
+
+#Valores por defecto
+[ "$F" ] || F=$F_DEF
+[ "$VB" ] || VB=$VB_DEF
+[ "$AB" ] || AB=$AB_DEF
+[ "$PASOS" ] || PASOS=$PASOS_DEF
+
+VIDEO_CODEC="-vcodec mpeg2video"
+#VIDEO_BITRATE="-b:v ${VB}k"
+VIDEO_BITRATE="-b ${VB}k"
+AUDIO_CODEC="-acodec mp2"
+#AUDIO_BITRATE="-b:a ${AB}k"
+AUDIO_BITRATE="-ab ${AB}k"
+AUDIO_SAMPLERATE="-ar 48000"
+AUDIO_CHANNELS="-ac 2"
+FORMAT="-f $F"
+#SIZE="-s 720x576"
+
+#AÑADIDO "deinterlace" porque en PAL DV los campos salen invertidos
+#ver "gspot" para analizar el orden de los campos.
+#DEINTERLACE="-deinterlace"
+#DEINTERLACE="-top auto"
+#DEINTERLACE="-top top"
+#DEINTERLACE="-top bottom"	#esto es lo normal en PAL DV, pero algunos videos saltan
+
+if [ $PASOS -eq 2 ]
+then
+  PASO="-pass 1 -passlogfile $LOG"
+  echo ===PASS 1===
+else
+  PASO=""
+fi
+
+avconv $DEINTERLACE $PASO -threads 2 -i "${INPUT}" ${VIDEO_CODEC} ${VIDEO_BITRATE} \
+${AUDIO_CODEC} ${AUDIO_BITRATE} ${AUDIO_SAMPLERATE} ${AUDIO_CHANNELS} $SIZE $FPS \
+${FORMAT} - > "${OUTPUT}"
+
+if [ $? -eq 0 -a $PASOS -eq 2 ]
+then
+PASO="-pass 2 -passlogfile $LOG"
+echo ===PASS 2===
+avconv $DEINTERLACE $PASO -threads 2 -i \""${INPUT}" ${VIDEO_CODEC} ${VIDEO_BITRATE} \
+${AUDIO_CODEC} ${AUDIO_BITRATE} ${AUDIO_SAMPLERATE} ${AUDIO_CHANNELS} $SIZE $FPS \
+${FORMAT} - > "${OUTPUT}"
+rm ${LOG}*.log
+fi

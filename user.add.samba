@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ $# -ne 1 ]
+then
+  printf "Uso:\n\t$0 usuario\n\n"
+  exit 1
+fi
+
+PATH=/util:$PATH
+
+smbpasswd -a $1

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+#Replicar mediante rsync haciendo que el destino sea idéntico (ojo, borra en el destino si no existe en origen)
+
+CMD=`basename $0`
+
+if [ $# -lt 2 -o $# -gt 3 ]
+then
+	printf "\nUso:\n\t$CMD origen destino [ssh-priv-key]\n\n"
+	exit 1
+fi
+
+if [ -z "$3" ]
+then
+  CERT=~/.ssh/`whoami`
+else
+  CERT=$3
+fi
+
+if [ ! -f $CERT ]
+then
+  printf "Clave privada ssh no encontrada (en $CERT)\n\n"
+  SSH=""
+else
+  SSH="ssh -C -i $CERT"
+  SSH="'"$SSH"'"
+  SSH="-e $SSH"
+fi
+
+
+X="rsync --archive --delete --verbose $SSH $1 $2"
+echo Ejecutando la orden: $X
+/bin/bash<<!
+$X
+!
+
+

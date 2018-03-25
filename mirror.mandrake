@@ -1,0 +1,26 @@
+#!/bin/bash
+#descarga de Mandrake 9.1
+
+#mirror interesante en:
+#ftp://ftp-stud.fht-esslingen.de/pub/Mirrors/Mandrake/iso
+
+PATH=$PATH:/util:/bin:/usr/bin
+
+export http_proxy=http://127.0.0.1:3128
+export ftp_proxy=http://127.0.0.1:3128
+
+logger "$0: `date`"
+
+# http://www.linuxiso.org/download.php/474/Mandrake91-cd1-inst.i586.iso \
+# http://www.linuxiso.org/download.php/474/Mandrake91-cd2-ext.i586.iso \
+# http://www.linuxiso.org/download.php/474/Mandrake91-cd3-i18n.i586.iso 
+
+for N in \
+  ftp://ftp-stud.fht-esslingen.de/pub/Mirrors/Mandrake/iso/Mandrake91-cd1-inst.i586.iso \
+  ftp://ftp-stud.fht-esslingen.de/pub/Mirrors/Mandrake/iso/Mandrake91-cd2-ext.i586.iso \
+  ftp://ftp-stud.fht-esslingen.de/pub/Mirrors/Mandrake/iso/Mandrake91-cd3-i18n.i586.iso
+do
+  echo "Descargando el fichero: $N"
+  wget --mirror --passive-ftp --wait=10 --random-wait --follow-ftp \
+     --continue --proxy=on --directory-prefix=/var/spool/mirrors $N
+done

@@ -1,0 +1,66 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso:\n\t$0 ca...\n\n"
+  exit 1
+fi
+
+BASE=/certs/ca
+
+DAYS=3650	#10 años
+EDITOR=nano
+CACERTCMD=update-ca-certificates
+
+$CACERTCMD >/dev/null 2>&1
+if [ $? -ne 0 ]
+then
+  printf "\n\nError en la ejecucion de $CACERTCMD\n\n¿Falta el comando? ¿privilegios?\n\n"
+  exit 1
+fi
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+for CA in $*
+do
+
+  if [ -d $BASE/$CA ]
+  then
+     printf "\n\nYa existe $BASE/$CA. Rehusando crear nuevo certificado.\n\n"
+     exit 1
+  fi
+
+  mkdir -p $BASE/$CA/{conf,private,public,signed-keys}
+  chmod 400 $BASE/$CA/private
+
+  cd $BASE/$CA
+
+  cp -uR $BASE/plantilla/conf/ .
+
+  echo Edite la configuracion por defecto de $CA...
+  sleep 3
+  $EDITOR ./conf/openssl.cnf
+
+  echo Generando CA...
+  ejecutar "openssl req -nodes -config ./conf/openssl.cnf -days $DAYS -x509 -newkey rsa:2048 -out public/$CA.pem -outform PEM"
+
+
+# renombrar a algo mas legible
+  mv private/root.pem private/$CA.pem
+
+  echo Instalando infraestructura ca-certificate...
+  cp public/$CA.pem /usr/share/ca-certificates/$CA.crt
+  echo $CA.crt >> /etc/ca-certificates.conf
+  update-ca-certificates 
+  ln -s /usr/share/ca-certificates/$CA.crt /etc/ssl/certs/$CA.pem
+  echo "Regenerando hashes en /etc/ssl/certs..."
+  c_rehash >/dev/null 2>&1
+
+  echo "Borrando symlinks incorrectos de /etc/ssl/certs..."
+  find /etc/ssl/certs/ ! -readable -exec rm {} \;
+
+done

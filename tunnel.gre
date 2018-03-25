@@ -1,0 +1,6 @@
+#!/bin/bash
+
+modprobe ip_gre
+ip tunnel add virtual mode gre remote 172.20.254.111 local 172.20.254.104 ttl 255
+ip link set virtual up
+ip addr add 10.9.9.1/24 dev virtual

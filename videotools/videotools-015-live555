@@ -1,0 +1,31 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+export CCFLAGS="-fPIC"
+
+echo Construyendo ...
+cd $BUILDPATH
+wget --continue http://www.live555.com/liveMedia/public/live555-latest.tar.gz && \
+rm -rf live && \
+tar xvf live555-latest.tar.gz && \
+cd live && \
+sed 's/-O2/-O2 -fPIC/g'  < config.linux > config.linux.new && \
+mv config.linux config.linux.sav && \
+mv config.linux.new config.linux && \
+./genMakefiles linux && \
+make && \
+cp -r $BUILDPATH/live/liveMedia/libliveMedia.a /usr/lib
+##make install && \
+#cp -r $BUILDPATH/live /usr/lib
+
+#Esto no se puede, no hay "make install"
+#checkinstall --fstrans=no --install=yes --pakdir "$HOME/Desktop" \
+#	--maintainer "$USER" --pkgname=live555 --pkgversion "1:0.svn`date +%Y%m%d`-0.0ubuntu1" \
+#	--backup=no --deldoc=yes --deldesc=yes --delspec=yes --gzman --default 

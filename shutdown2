@@ -1,0 +1,15 @@
+#/bin/bash
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nuso:\n\t$0 segundos\n\n"
+  exit 0
+fi
+
+echo $0: Usuario=`whoami`
+echo $0: Esperando $1 segundos...
+sleep $1
+echo $0: APAGANDO EL SISTEMA 
+sudo shutdown now
+
+exit 0

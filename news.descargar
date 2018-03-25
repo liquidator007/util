@@ -1,0 +1,27 @@
+#!/bin/bash
+#descarga de news con leafnode.
+#script para evitar que si la linea cae (lo cual cuelga el fetchnews)
+#las news se bloqueen
+
+PATH=$PATH:/util:/bin:/usr/bin:/usr/sbin
+
+. /etc/rc.d/init.d/functions
+
+C=`basename $0`
+
+if [ $# -ne 0 ]
+then
+  printf "\n\nUso:\n\t $C\n\n"
+  exit 1
+fi
+
+LCK=/var/lock/news/fetchnews.lck
+
+printf "Eliminando procesos activos..."
+killproc fetchnews	#matar proceso viejo
+printf "Eliminando bloqueo ($LCK)..."
+rm -f $LCK
+echo "ok"
+printf "Descargando noticias...\n"
+fetchnews -vv
+echo "ok"

@@ -1,0 +1,9 @@
+#mkdir -p ~/.xine 2> /dev/null		#crear carpeta de usuario para xine, si no existe
+mount /media/cdrom0
+/util/crear-playlist-xine /media/cdrom0 > /tmp/xine-tmp.tox
+
+#activar el volumen
+amixer sset 'PCM',0 95% unmute
+amixer sset 'Master',0 95% unmute
+
+xine -phf /tmp/xine-tmp.tox

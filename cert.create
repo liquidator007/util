@@ -1,0 +1,75 @@
+#!/bin/bash
+
+if [ $# -lt 2 -o $# -gt 4 ]
+then
+  printf "\nUso:\n\t$0 fich-crt dias { CA-file | none } [config-file]\n\n";
+  echo fich-crt es el nombre base del fichero de certificado a generar \(genera .key, .crt y .pem\)
+  echo dias es el periodo de validez
+  echo CA-file es el nombre base del fichero de la autoridad certificadora \("none" para autofirmado\)
+  echo config-file es un fichero de configuracion opcional \(ej. /etc/courier/imapd.cnf \)
+  exit 1
+fi
+
+CSR=$1.csr
+KEY=$1.key
+CERT=$1.crt
+PEM=$1.pem
+DIAS=$2
+CA=$3
+CNF=$4
+
+if [ $CA = none ]
+then
+  CA_CMD="-signkey $KEY"
+else
+  if [ ! -f $CA.key -o ! -f $CA.crt ]
+  then
+    echo "No se encuentra el certificado de la autoridad especificada $CA"
+    exit 1
+  else
+    CA_CMD="-signkey $CA.key -CA $CA.crt -CAkey $CA.key -CAcreateserial"
+  fi
+fi
+
+if [ ! -z $CNF -a -f $CNF ]
+then
+  CNF_CMD="-config $CNF "
+else
+  CNF_CMD=""
+fi
+
+echo creando private key...
+X="openssl genrsa -out $KEY 1024"
+echo $X
+sh <<!
+$X
+!
+echo $KEY creado
+
+echo creando Certificate Signing Request \(CSR\)...
+openssl req -new -key $KEY -out $CSR $CNF_CMD
+echo $CSR creado
+
+echo eliminando passphrase...
+X="openssl rsa -in $KEY -out $KEY"
+echo $X
+sh <<!
+$X
+!
+
+echo creando certificado...
+X="openssl x509 -in $CSR -out $CERT -req $CA_CMD -days $DIAS"
+echo $X
+sh <<!
+$X
+!
+echo $KEY creado
+echo $CERT creado
+
+echo creando "pem" con la clave privada y el certificado...
+cat $KEY $CERT > $PEM
+echo $PEM generado
+
+echo añadiendo codigo Diffie-Hellman a $PEM...
+openssl gendh >> $PEM
+echo $PEM completo

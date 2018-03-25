@@ -1,0 +1,42 @@
+#!/bin/bash
+
+#IMPORTANTE:
+#-Ubuntu elimina los encoders al empaquetar VLC.
+#-para evitar el problema, instala los paquetes "non-free-codecs" y "aacplusenc" desde Medibuntu
+#AÑADIDO "deinterlace" porque en los videos PAL DV el orden de los campos sale invertido en MPEG
+
+PATH=/usr/local/bin:/usr/bin:.
+INPUT="$1"
+OUTPUT="$2"
+
+#si el siguiente no funciona cambiar por mpgv
+VIDEO_CODEC="mp2v"
+VIDEO_BITRATE="4096"
+VIDEO_FRAMERATE="25"
+AUDIO_CODEC="mp3"
+#AUDIO_BITRATE=",ab=192"
+AUDIO_BITRATE=""
+AUDIO_SAMPLERATE="44100"
+AUDIO_CHANNELS="2"
+FORMAT="ps"
+SUBTITLE_LANGUAGE="eng"
+
+
+#samplerate=${AUDIO_SAMPLERATE},channels=${AUDIO_CHANNELS},deinterlace,soverlay,audio-sync}:\
+
+#vlc "${INPUT}" -I dummy --sout "#transcode{vcodec=${VIDEO_CODEC},\
+#vb=${VIDEO_BITRATE},fps=${VIDEO_FRAMERATE},acodec=${AUDIO_CODEC},\
+#samplerate=${AUDIO_SAMPLERATE},channels=${AUDIO_CHANNELS},soverlay,audio-sync}:\
+#standard{mux=${FORMAT},access=file,dst=${OUTPUT}}" --sub-language=${SUBTITLE_LANGUAGE} \
+#vlc:quit 
+
+vlc "${INPUT}" -I dummy --sout "#transcode{venc=ffmpeg,vcodec=${VIDEO_CODEC},\
+vb=${VIDEO_BITRATE},fps=${VIDEO_FRAMERATE},acodec=${AUDIO_CODEC}${AUDIO_BITRATE},\
+samplerate=${AUDIO_SAMPLERATE},channels=${AUDIO_CHANNELS},soverlay,audio-sync}:\
+standard{mux=${FORMAT},access=file,dst="${OUTPUT}"}" --sub-language=${SUBTITLE_LANGUAGE} \
+vlc:quit 
+
+#vlc "${INPUT}"  -I dummy \
+#     --sout #transcode{venc=ffmpeg,vcodec=mp2v,vb=4096,fps=25,aenc=ffmpeg,
+#     acodec=mpga,ab=192,samplerate=44100,channels=2}:standard{access=file,mux=ps,dst=%out} 
+#     vlc:quit"/>

@@ -1,0 +1,81 @@
+#!/bin/bash
+
+if [ ! $# -eq 2 ]
+then
+  printf "\n\nUso:\n\t$0 csr ca\n\n"
+  exit 1
+fi
+
+BASE=/certs/signed
+BASECSR=/certs/requests
+BASECA=/certs/ca
+EDITOR=nano
+DIAS=3650
+
+C=$1
+CA=$2
+
+if [ ! -d $BASECA/$CA ]
+then
+     printf "\n\nNo existe $BASECA/$CA. Primero cree una CA.\n\n"
+     exit 1
+fi
+
+if [ ! -d $BASECSR/$C ]
+then
+     printf "\n\nNo existe $BASECSR/$C. Primero cree un csr.\n\n"
+     exit 1
+fi
+
+if [ -f $BASE/private/$C.pem ] 
+then
+     printf "\n\nYa existe $BASE/private/$C.pem. Rehusando crear nuevo certificado.\n\n"
+     exit 1
+fi
+
+if [ -f $BASE/public/$C.pem ] 
+then
+     printf "\n\nYa existe $BASE/public/$C.pem. Rehusando crear nuevo certificado.\n\n"
+     exit 1
+fi
+
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+
+CNF_CMD="-config $BASECSR/$C/conf/openssl.cnf"
+CSR=$BASECSR/$C/public/$C.csr
+CERT=$BASE/public/$C.pem
+PKEY=$BASE/private/$C.pem
+CACERT=$BASECA/$CA/public/$CA.pem
+CAKEY=$BASECA/$CA/private/$CA.pem
+KEY=$BASECSR/$C/private/$C.pem
+KEYCOPY=$BASE/private/$C.pem
+P12=$BASE/public/$C.p12
+CA_CMD="-signkey $CAKEY -CA $CACERT -CAkey $CAKEY -CAcreateserial"
+
+mkdir -p $BASE/{public,private} >/dev/null 2>&1
+
+cd $BASECSR
+
+echo eliminando passphrase...
+ejecutar "openssl rsa -in $KEY -out $KEY"
+
+cp $KEY $KEYCOPY
+
+#echo creando certificado...
+#ejecutar "openssl x509 -in $CSR -out $CERT -req $CA_CMD -days $DIAS"
+#echo clave privada en $KEYCOPY
+#echo certificado y clave publica en $CERT
+
+cd $BASECA/$CA
+
+echo Firmando y generando $CERT...
+ejecutar "openssl ca -batch $CNF_CMD -in $CSR -out $CERT  -keyfile $CAKEY -cert $CACERT"
+
+echo Convirtiendo a PKCS#12...
+ejecutar "openssl pkcs12 -export -in $CERT -inkey $KEY -out $P12 -name $P12"

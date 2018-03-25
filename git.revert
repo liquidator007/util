@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso:\n\t$0 commit-ID...\n\n"
+  exit 1
+fi
+
+for ID in $*
+do
+  git revert $ID
+done

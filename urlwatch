@@ -1,0 +1,33 @@
+trap 'echo Recibido SIGTERM; exit 1' SIGTERM
+trap 'echo Recibido SIGKILL; exit 1' SIGKILL
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+PIDFILE=/var/run/urlwatch.pid
+
+if [ $# -ne 4 ]
+then
+  printf "\nUso:\n\t$0 URL sleepoksecs sleeperrorsecs failaction\n\n"
+  exit 1
+fi
+
+echo $BASHPID >> $PIDFILE
+
+URL=$1
+SLEEPOK=$2
+SLEEPERROR=$3
+ACTION=$4
+
+while true
+do
+  wget -q -O /dev/null $URL
+  RET=$?
+  if [ $RET -ne 0 ]
+  then
+    printf "[$ACTION]"
+    $ACTION
+    sleep $SLEEPERROR
+  else
+    printf "."
+    sleep $SLEEPOK
+  fi
+done

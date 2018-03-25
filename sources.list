@@ -1,0 +1,19 @@
+# List of available apt repositories available from ayo.freshrpms.net.
+# This file should contain an uncommented default suitable for your system.
+#
+# See http://ayo.freshrpms.net/ for a list of other repositories and mirrors.
+#
+# $Id: sources.list,v 1.8 2003/04/16 09:59:58 dude Exp $
+
+# Red Hat Linux 9
+rpm http://ayo.freshrpms.net redhat/9/i386 os updates freshrpms
+rpm-src http://ayo.freshrpms.net redhat/9/i386 os updates freshrpms
+rpm ftp://apt-rpm.tuxfamily.org/apt redhat/9/en/i386 os updates extra
+rpm-src ftp://apt-rpm.tuxfamily.org/apt redhat/9/en/i386 os updates extra
+rpm ftp://mirror.phy.bnl.gov/pub/apt-rpm redhat/9/en/i386 os updates
+rpm-src ftp://mirror.phy.bnl.gov/pub/apt-rpm redhat/9/en/i386 os updates
+rpm http://macromedia.rediris.es/apt redhat/9 macromedia
+rpm http://redhat.usu.edu/mirrors/apt  redhat/9/en/i386 os updates
+rpm ftp://ftp.uninett.no/pub/linux/apt redhat/rawhide/en/i386/redhat os
+rpm-src ftp://ftp.uninett.no/pub/linux/apt redhat/rawhide/en/i386/redhat os
+rpm http://apt.nlc.no redhat/rawhide/i386 cds

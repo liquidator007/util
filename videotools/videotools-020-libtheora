@@ -1,0 +1,23 @@
+#!/bin/bash
+
+BUILDPATH=/usr/src
+VERSION=1.1.1
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+#ejecutar "apt-get --yes install libtheora-dev"
+#exit $?
+
+#build
+echo Construyendo libtheora [video ogg] 
+cd $BUILDPATH && \
+wget --continue http://downloads.xiph.org/releases/theora/libtheora-$VERSION.tar.gz && \
+tar xzvf libtheora-$VERSION.tar.gz && \
+cd libtheora-$VERSION && \
+./configure && \
+make && \
+sudo checkinstall --pkgname=libtheora --pkgversion "$VERSION" --backup=no --default && \
+make distclean

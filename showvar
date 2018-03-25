@@ -1,0 +1,11 @@
+#!/bin/bash
+
+#/util/showvar
+#	muestra las variables de entorno que se pasen como argumento
+
+for VAR in $*
+do
+  printf "${VAR}"
+  eval VAR="$"$VAR
+  printf "\t${VAR}\n"
+done

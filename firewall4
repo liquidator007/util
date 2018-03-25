@@ -1,0 +1,1281 @@
+#!/bin/bash
+#
+# chkconfig: - 80 20
+# description: firewall4
+# Enable and build firewall up, based on rules written in /etc/firewall4
+# probe:true
+
+
+#PENDING
+# isIPv4, isIPv6 can be called on NULL SRC or DEST addresses
+
+#NOTE: this script must reside in /etc/init.d, then activated with "update-rc.d firewall4 defaults" and "service firewall4 start"
+#NOTE: check /tmp/firewall-v4.sh if you want to see all executed iptables commands
+
+SAVE=/var/lib/firewall/firewall4.save			#file for "iptables-save"
+CONFDIR=/etc/firewall4
+OUTPUT=/tmp/firewall-v4.sh
+NULL=null
+
+
+PATH=/sbin:/usr/local/sbin:$PATH
+DEBUGMSG=firewall4
+I4=exec_ip4tables
+I6=exec_ip6tables
+I46=exec_ip46tables
+
+clear
+. $CONFDIR/config
+
+#Esto no se usa, pero lo dejo
+IPV4_DEFAULT_GATEWAY=${IPV4_ISP_WAN[0]}
+IPV6_DEFAULT_GATEWAY=${IPV6_ISP_WAN[0]}
+
+
+#################################################################################################################33
+#IPv4()
+#Input: network device
+#Output: string with its IPv4 addresses
+IPv4()
+{
+  echo $(ip addr show dev $1 | sed -rn 's/inet ([^ \/]+).*/\1/p')
+}
+
+#################################################################################################################33
+#IPv4net()
+#Input: network device
+#Output: string with its IPv4 addresses/masks
+IPv4net()
+{
+  echo $(ip addr show dev $1 | sed -rn 's/inet ([^ ]+).*/\1/p')
+}
+
+#################################################################################################################33
+#IPv4brd()
+#Input: network device
+#Output: string with its IPv4 broadcast addrs
+IPv4brd()
+{
+  echo $(ip addr show dev $1 | sed -rn 's/inet .*brd ([^ ]+).*/\1/p')
+}
+
+#################################################################################################################33
+#ethermac()
+#Input: network device
+#Output: string with its ether mac
+ethermac()
+{
+  echo $(ip addr show dev $1 | sed -rn 's/.*ether ([^ ]+).*/\1/p')
+}
+
+#################################################################################################################33
+#etherbrd()
+#Input: network device
+#Output: string with its ether broadcast addrs
+etherbrd()
+{
+  echo $(ip addr show dev $1 | sed -rn 's/.*ether.*brd ([^ ]+).*/\1/p')
+}
+
+#################################################################################################################33
+#IPv6()
+#Input: network device
+#Output: string with its IPv6 addresses
+IPv6()
+{
+  echo $(ip addr show dev $1 | sed -rn 's/inet6 ([^ \/]+).*/\1/p')
+}
+
+#################################################################################################################33
+#IPv6net()
+#Input: network device
+#Output: string with its IPv6 addresses/masks
+IPv6net()
+{
+  echo $(ip addr show dev $1 | sed -rn 's/inet6 ([^ ]+).*/\1/p')
+}
+
+#################################################################################################################33
+#IPv4v6()
+#Input: network device
+#Output: string with its IPv4 and IPv6 addresses
+IPv4v6()
+{
+  echo $(ip addr show dev $1 | sed -rn 's/inet6? ([^ \/]+).*/\1/p')
+}
+
+#################################################################################################################33
+#isIPv4()
+#Input: network device
+#Output: string with its IPv4 and IPv6 addresses
+isIPv4()
+{
+grep -Eq '^((25[0-5]|2[0-5][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-5][0-9]|[01]?[0-9][0-9]?)(\/[0-9]{1,2})?$' <<!
+$1
+!
+  if [ $? -eq 0 ]
+  then
+     echo 1
+  else
+     echo 0
+  fi
+}
+
+#################################################################################################################33
+#isIPv6()
+#Input: network device
+#Output: string with its IPv4 and IPv6 addresses
+isIPv6()
+{
+P="([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}"          # 1:2:3:4:5:6:7:8
+P=${P}"|([0-9a-fA-F]{1,4}:){1,7}:"                         # 1::                              1:2:3:4:5:6:7::
+P=${P}"|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}"         # 1::8             1:2:3:4:5:6::8  1:2:3:4:5:6::8
+P=${P}"|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}"  # 1::7:8           1:2:3:4:5::7:8  1:2:3:4:5::8
+P=${P}"|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}"  # 1::6:7:8         1:2:3:4::6:7:8  1:2:3:4::8
+P=${P}"|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}"  # 1::5:6:7:8       1:2:3::5:6:7:8  1:2:3::8
+P=${P}"|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}"  # 1::4:5:6:7:8     1:2::4:5:6:7:8  1:2::8
+P=${P}"|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})"       # 1::3:4:5:6:7:8   1::3:4:5:6:7:8  1::8  
+P=${P}"|:((:[0-9a-fA-F]{1,4}){1,7}|:)"                     # ::2:3:4:5:6:7:8  ::2:3:4:5:6:7:8 ::8       ::     
+P=${P}"|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}"     # fe80::7:8%eth0   fe80::7:8%1     (link-local IPv6 addresses with zone index)
+P=${P}"|::(ffff(:0{1,4}){0,1}:){0,1}"
+P=${P}"((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}"
+P=${P}"(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])"          # ::255.255.255.255   ::ffff:255.255.255.255  ::ffff:0:255.255.255.255  (IPv4-mapped IPv6 addresses and IPv4-translated addresses)
+P=${P}"|([0-9a-fA-F]{1,4}:){1,4}:"
+P=${P}"((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}"
+P=${P}"(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])"           # 2001:db8:3:4::192.0.2.33  64:ff9b::192.0.2.33 (IPv4-Embedded IPv6 Address)
+
+grep -Eq "^($P)(\/[0-9]{1,3})?$" <<!
+$1
+!
+  if [ $? -eq 0 ]
+  then
+     echo 1
+  else
+     echo 0
+  fi
+}
+
+#################################################################################################################33
+#trim()
+#Input: string with leading / trailing spaces
+#Output: string without leading / trailing spaces
+trim() {
+    local var="$*"
+    var="${var#"${var%%[![:space:]]*}"}"   # remove leading whitespace characters
+    var="${var%"${var##*[![:space:]]}"}"   # remove trailing whitespace characters
+    echo -n "$var"
+}
+
+#################################################################################################################33
+#IPS()
+#Input: string with mixed IP addresses and domain names
+#Output: string with IP addresses (names resolved)
+IPS()
+{
+  if [ ! -z "$1" ]		#not empty
+  then
+    R=""
+    for P in $*
+    do
+      IP4=`isIPv4 $P`
+      IP6=`isIPv6 $P`
+      if [ "$IP4" == 1 -o "$IP6" == 1 ]
+      then
+        #is address, copy to output, no change
+        R="${R} $P"
+      else
+        #is domain, resolve for A and AAAA
+        #IMPORTANTE: En este punto el script debe tener el cortafuegos OPEN para consultar DNS
+        DIG=`dig +short $P A`
+        R="${R} ${DIG}"
+        DIG=`dig +short $P AAAA`
+        R="${R} ${DIG}"
+      fi
+    done
+    echo $R
+  else
+    echo "null"
+  fi
+}
+
+
+#################################################################################################################33
+#execute iptables command and write it to OUTPUT
+exec_ip4tables()
+{
+  CMD="iptables $*"
+  printf "$CMD" >> $OUTPUT 2>&1
+  sh -c "$CMD" >>$OUTPUT 2>&1
+  RET=$?
+  if [ $RET -ne 0 ]
+  then
+    echo " #RETCODE=$RET" >> $OUTPUT
+    echo ERROR: $CMD
+    echo " #RETCODE=$RET" 
+  else
+    echo >> $OUTPUT
+  fi
+}
+
+#################################################################################################################33
+#execute ip6tables command and write it to OUTPUT
+exec_ip6tables()
+{
+  CMD="ip6tables $*"
+  printf "$CMD" >> $OUTPUT 2>&1
+  sh -c "$CMD" >>$OUTPUT 2>&1
+  RET=$?
+  if [ $RET -ne 0 ]
+  then
+    echo " #RETCODE=$RET" >> $OUTPUT
+    echo ERROR: $CMD
+    echo " #RETCODE=$RET" 
+  else
+    echo >> $OUTPUT
+  fi
+}
+
+#################################################################################################################33
+#execute tables and ip6tables command and write it to OUTPUT
+exec_ip46tables()
+{
+  exec_ip4tables $*
+  exec_ip6tables $*
+}
+
+#################################################################################################################33
+#execute any other command, write it to OUTPUT
+execute()
+{
+  CMD="$*"
+  echo $CMD >> $OUTPUT 2>&1
+  sh -c "$CMD" >>$OUTPUT 2>&1
+}
+
+#################################################################################################################33
+empty_chains()
+{
+for i in `cat /proc/net/ip_tables_names`
+do
+  $I46 -F -t $i
+  $I46 -X -t $i
+  $I46 -Z -t $i
+done
+}
+
+#################################################################################################################33
+empty_mangle()
+{
+for i in mangle filter
+do
+  $I46 -F -t $i
+  $I46 -X -t $i
+  $I46 -Z -t $i
+done
+}
+
+
+#################################################################################################################
+# purpose: processing a zone (zone -> fw) or (fw -> zone )
+firewall_in_out()
+{
+FILE=$1
+if [ "$CHAINLOG" = 1 ]
+then 
+  $I46 -A $1 -j LOG --log-level info --log-prefix "$DEBUGMSG:firewall_in_out:$1:"
+fi
+if [ -f "$CONFDIR/$FILE" -a -r "$CONFDIR/$FILE" ]
+then 
+echo Processing $CONFDIR/$FILE...
+while read P
+do
+  P=${P%%#*}	#Borrar comentarios
+  if [ ! -z "$P" ]
+  then
+  PROTO=`echo $P | cut -d';' -f1`
+  PUERTOO=`echo $P | cut -d';' -f2`
+  PUERTOD=`echo $P | cut -d';' -f3`
+  if [ ! -z $PROTO ]
+  then
+     PROTO="-p $PROTO"
+  fi
+  if [ ! -z $PUERTOO ]
+  then
+     PO="--match multiport --sports $PUERTOO"
+  else
+     PO=""
+  fi
+  if [ ! -z $PUERTOD ]
+  then
+     PD="--match multiport --dports $PUERTOD"
+  else
+     PD=""
+  fi
+  SRC=`echo $P | cut -d';' -f4`
+  DST=`echo $P | cut -d';' -f5`
+  JMP=`echo $P | cut -d';' -f6`
+  CONNLIMIT=`echo $P | cut -d';' -f7`
+  IFACE=`echo $P | cut -d';' -f8`
+  SRCS=`IPS $SRC`
+  DSTS=`IPS $DST`
+  if [ ! -z "$JMP" ]
+  then
+     JMP="-j $JMP"
+  else
+     JMP="-j ACCEPT"
+  fi
+#  if [ ! -z $CONNLIMIT ]
+#  then
+#     CONNLIMIT="-m connlimit --connlimit-above $CONNLIMIT"
+#  fi
+  for S in $SRCS
+  do
+  for D in $DSTS
+  do
+  SRC6=`isIPv6 $S`
+  DST6=`isIPv6 $D`
+  SRC4=`isIPv4 $S`
+  DST4=`isIPv4 $D`
+  if [ "$S" != "null" ]
+  then
+     SRC="-s $S"
+  else
+     SRC=""
+  fi
+  if [ "$D" != "null" ]
+  then
+     DST="-d $D"
+  else
+     DST=""
+  fi
+#  echo $S $SRC4 $SRC6 >> $OUTPUT
+#  echo $D $DST4 $DST6 >> $OUTPUT
+
+  if [ $SRC6 -eq 1 -o $DST6 -eq 1 ]
+  then	#IPv6 rule
+    $I6 -A $1 $PROTO $PO $PD $CONNLIMIT $SRC $DST $JMP $IFACE
+  elif [ $SRC4 -eq 1 -o $DST4 -eq 1 ]
+  then  #IPv4 rule
+    $I4 -A $1 $PROTO $PO $PD $CONNLIMIT $SRC $DST $JMP $IFACE
+  else  #IPv4 & IPv6 rule
+    $I46 -A $1 $PROTO $PO $PD $CONNLIMIT $JMP $IFACE
+  fi
+  done
+  done
+  fi
+done < "$CONFDIR/$1"
+else
+echo Error: $CONFDIR/$FILE is unreadable
+fi
+}
+
+#################################################################################################################
+zone_to_zone()
+{
+if [ "$CHAINLOG" = 1 ]
+then 
+  $I46 -A $1 -j LOG --log-level info --log-prefix "$DEBUGMSG:from_zone:$1:"
+fi
+if [ -f "$CONFDIR/$1" -a -r "$CONFDIR/$1" ]
+then 
+  echo Processing $CONFDIR/$1...
+  while read P
+  do
+    P=${P%%#*}	#Borrar comentarios
+    P=`trim $P`
+    if [ ! -z "$P" ]
+    then
+      PROTO=`echo $P | cut -d';' -f1`
+      IPP=`echo $P | cut -d';' -f2`
+      PUERTOP=`echo $P | cut -d';' -f3`
+      SRC=`echo $P | cut -d';' -f4`
+      PUERTOO=`echo $P | cut -d';' -f5`
+      DST=`echo $P | cut -d';' -f6`
+      PUERTOD=`echo $P | cut -d';' -f7`
+      JMP=`echo $P | cut -d';' -f8`
+      CONNLIMIT=`echo $P | cut -d';' -f9`
+      I_IFACE=`echo $P | cut -d';' -f10`
+      O_IFACE=`echo $P | cut -d';' -f11`
+
+      SRCS=`IPS $SRC`
+      DSTS=`IPS $DST`
+      if [ ! -z $PROTO ]
+      then
+        PROTO="-p $PROTO"
+      else
+	PROTO=""
+      fi
+      if [ ! -z "$JMP" ]
+      then
+        JMP="-j $JMP"
+      else
+        JMP="-j ACCEPT"
+      fi
+#      if [ ! -z $CONNLIMIT ]
+#      then
+#        CONNLIMIT="-m connlimit --connlimit-above $CONNLIMIT"
+#      fi
+      if [ ! -z $I_IFACE ]
+      then
+        I_IFACE="-i $I_IFACE"
+      fi
+      if [ ! -z $O_IFACE ]
+      then
+        O_IFACE="-o $O_IFACE"
+      fi
+
+      for S in $SRCS
+      do
+        for D in $DSTS
+        do
+          SRC6=`isIPv6 $S`
+          DST6=`isIPv6 $D`
+          SRC4=`isIPv4 $S`
+          DST4=`isIPv4 $D`
+          IPP4=`isIPv4 $IPP`
+          if [ "$S" != "null" ]
+          then
+            SRC="-s $S"
+          else
+            SRC=""
+          fi
+          if [ "$D" != "null" ]
+          then
+            DST="-d $D"
+          else
+            DST=""
+          fi
+          if [ ! -z "$PUERTOO" ]
+          then
+            PO="--match multiport --sports $PUERTOO"
+          else
+            PO=""
+          fi
+          if [ ! -z "$PUERTOD" ]
+          then
+            PD="--match multiport --dports $PUERTOD"
+          else
+            PD=""
+          fi
+          if [ "$JMP" == '-j ACCEPT' -a $IPP4 -a ! -z "$PUERTOP" ]
+          then     #IPv4 con DNAT
+            $I4 -t nat -A PREROUTING $PROTO $I_IFACE $O_IFACE $SRC $DST $PO $PD -j DNAT --to-destination $IPP:$PUERTOP
+	    #una vez cambiado el destino en el prerouting, puede entrar por INPUT o FORWARD, a saber. Por si acaso ponemos ambos
+            #y con el destimo (IP y puerto) nuevos.
+	    #las interfaces pueden haber dejado de tener sentido tras DNAT, quitar
+            $I4 -A INPUT $PROTO $SRC -d $IPP $PO --dport $PUERTOP $CONNLIMIT  $JMP
+            $I4 -A FORWARD $PROTO $SRC -d $IPP $PO --dport $PUERTOP $CONNLIMIT  $JMP
+          elif [ $SRC6 -eq 1 -o $DST6 -eq 1 ]
+          then	#IPv6 
+            $I6 -A $1 $PROTO $I_IFACE $O_IFACE $SRC $DST $PO $PD $CONNLIMIT  $JMP
+          elif [ $SRC4 -eq 1 -o $DST4 -eq 1 ]
+          then  #IPv4 normal
+            $I4 -A $1 $PROTO $I_IFACE $O_IFACE $SRC $DST $PO $PD $CONNLIMIT  $JMP
+          else  #IPv4 & IPv6 rule
+            $I46 -A $1 $PROTO $I_IFACE $O_IFACE $PO $PD $CONNLIMIT $JMP 
+          fi
+        done
+      done 
+    fi
+  done < "$CONFDIR/$1"
+else
+  echo Error: $CONFDIR/$FILE is unreadable
+fi
+}
+
+start()
+{
+echo "Commands will be saved into $OUTPUT"
+echo \#`date` > $OUTPUT
+echo
+echo
+# Desactivar reenvio provisionalmente
+execute "echo 0 > /proc/sys/net/ipv4/ip_forward"
+execute "echo 0 > /proc/sys/net/ipv6/conf/all/forwarding"
+
+#CARGA DE MODULOS - IMPORTANTE
+execute "modprobe ip_conntrack"
+execute "modprobe ip_conntrack_ftp"
+execute "modprobe nf_nat_proto_gre"
+execute "modprobe nf_conntrack_proto_gre"
+execute "modprobe nf_conntrack_pptp"
+execute "modprobe nf_nat_pptp"
+execute "sysctl -w net.core.message_cost=0"
+
+empty_chains
+
+#Politicas por defecto aconsejables
+
+$I46 -P INPUT $DEFAULT_POLICY
+$I46 -P FORWARD $DEFAULT_POLICY
+$I46 -P OUTPUT $DEFAULT_POLICY
+
+$I4 -t nat -P PREROUTING ACCEPT
+$I4 -t nat -P POSTROUTING ACCEPT
+$I4 -t nat -P OUTPUT ACCEPT
+
+$I46 -t mangle -P PREROUTING ACCEPT
+$I46 -t mangle -P POSTROUTING ACCEPT
+$I46 -t mangle -P OUTPUT ACCEPT
+$I46 -t mangle -P INPUT ACCEPT
+$I46 -t mangle -P FORWARD ACCEPT
+
+$I46 -N synflood	
+$I46 -N pingdeath
+$I46 -N portscan
+$I46 -N newnotsyn
+
+$I46 -N droplog
+
+#Create zone-to-zone user chains for existing files only
+for (( i = 0 ; i < ${#ZONES[@]} ; i++ ))
+do
+  FZ=${ZONES[$i]}
+  for (( j = 0 ; j < ${#ZONES[@]} ; j++ ))
+  do
+    TZ=${ZONES[$j]}
+    ZN=${FZ}${TO}${TZ}
+    if [ -r "${CONFDIR}/${ZN}" ]
+    then
+#      echo creating chain ${ZN}
+      $I46 -N ${ZN}	#create chain
+    fi
+  done
+done
+
+#Create zone-to-fw and fw-to-zone user chains for existing files only
+for (( i = 0 ; i < ${#ZONES[@]} ; i++ ))
+do
+  FZ=${ZONES[$i]}
+  TZ=${FIREWALL}
+  ZN=${FZ}${TO}${TZ}
+  if [ -r "${CONFDIR}/${ZN}" ]
+  then
+#    echo creating chain ${ZN}
+    $I46 -N ${ZN}		#create chain
+  fi
+  ZN=${TZ}${TO}${FZ}
+  if [ -r "${CONFDIR}/${ZN}" ]
+  then
+#    echo creating chain ${ZN}
+    $I46 -N ${ZN}		#create chain
+  fi
+done
+
+######################################################################
+#POR OPTIMIZACION; la regla ESTABLISHED, RELATED sera siempre la primera regla de la cadena
+######################################################################
+
+for CHAIN in INPUT OUTPUT FORWARD
+do
+  $I4 -A $CHAIN -p icmp -m state --state ESTABLISHED,RELATED $ICMP4_LIMIT -j ACCEPT
+  $I4 -A $CHAIN ! -p icmp -m state --state ESTABLISHED,RELATED -j ACCEPT
+  $I6 -A $CHAIN -p icmpv6 -m state --state ESTABLISHED,RELATED $ICMP6_LIMIT -j ACCEPT
+  $I6 -A $CHAIN ! -p icmpv6 -m state --state ESTABLISHED,RELATED -j ACCEPT
+done
+
+#ABRIR DNS TEMPORAL $$$ (BORRAR TRAS PROBAR)
+#$I46 -A INPUT -p udp --dport 53 -j ACCEPT
+#$I46 -A OUTPUT -p udp --dport 53 -j ACCEPT
+#$I46 -A FORWARD -p udp --dport 53 -j ACCEPT
+#$I46 -A INPUT -p udp --sport 53 -j ACCEPT
+#$I46 -A OUTPUT -p udp --sport 53 -j ACCEPT
+#$I46 -A FORWARD -p udp --sport 53 -j ACCEPT
+
+#Traffic Shaping
+if [ -n "$WONDERSHAPER" ]
+then
+lLen=${#IF_wan[@]}
+for (( i=0; i<${lLen}; i++ ));
+  do
+    execute "wondershaper ${IF_wan[$i]} ${KBITSEC_DOWN[$i]} ${KBITSEC_UP[$i]}"
+  done
+fi
+
+######################################################################
+# Reglas generales
+######################################################################
+
+
+#Flags incorrectos, posible ataque
+$I46 -A INPUT -p tcp -m state --state INVALID -j $REJECT_POLICY
+$I46 -A INPUT -p tcp --tcp-flags ALL NONE -j $REJECT_POLICY
+$I46 -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j $REJECT_POLICY
+$I46 -A INPUT -p tcp --tcp-flags SYN,RST SYN,RST -j $REJECT_POLICY
+$I46 -A INPUT -p tcp --tcp-flags FIN,RST FIN,RST -j $REJECT_POLICY
+$I46 -A INPUT -p tcp --tcp-flags ACK,FIN FIN -j $REJECT_POLICY
+$I46 -A INPUT -p tcp --tcp-flags ACK,PSH PSH -j $REJECT_POLICY
+$I46 -A INPUT -p tcp --tcp-flags ACK,URG URG -j $REJECT_POLICY
+
+$I46 -A FORWARD -p tcp -m state --state INVALID -j $REJECT_POLICY
+$I46 -A FORWARD -p tcp --tcp-flags ALL NONE -j $REJECT_POLICY
+$I46 -A FORWARD -p tcp --tcp-flags SYN,FIN SYN,FIN -j $REJECT_POLICY
+$I46 -A FORWARD -p tcp --tcp-flags SYN,RST SYN,RST -j $REJECT_POLICY
+$I46 -A FORWARD -p tcp --tcp-flags FIN,RST FIN,RST -j $REJECT_POLICY
+$I46 -A FORWARD -p tcp --tcp-flags ACK,FIN FIN -j $REJECT_POLICY
+$I46 -A FORWARD -p tcp --tcp-flags ACK,PSH PSH -j $REJECT_POLICY
+$I46 -A FORWARD -p tcp --tcp-flags ACK,URG URG -j $REJECT_POLICY
+
+#
+#Ataques DoS (unidades: /second, /minute, /hour o /day, o abreviaturas)
+#
+
+#anti inundacion syn (syn-flood)
+$I46 -A INPUT -p tcp --tcp-flags SYN,RST,ACK SYN  -j synflood
+$I46 -A FORWARD -p tcp --tcp-flags SYN,RST,ACK SYN  -j synflood
+$I46 -A synflood $SYNFLOOD_LIMITS -j RETURN
+if [ "$DROPLOG" = 1 ]
+then
+$I46 -A synflood -j LOG --log-level info --log-prefix "iptables:synflood:"
+fi
+$I46 -A synflood -j DROP
+
+#anti ping de la muerte (ping of death)
+$I4 -A INPUT -p icmp --icmp-type echo-request -j pingdeath
+$I4 -A FORWARD -p icmp --icmp-type echo-request -j pingdeath
+$I6 -A INPUT -p icmpv6 --icmpv6-type echo-request -j pingdeath
+$I6 -A FORWARD -p icmpv6 --icmpv6-type echo-request -j pingdeath
+
+$I46 -A pingdeath $PINGDEATH_LIMITS -j RETURN
+if [ "$DROPLOG" = 1 ]
+then
+$I46 -A pingdeath -j LOG --log-level info --log-prefix "iptables:pingdeath:"
+fi
+$I46 -A pingdeath -j DROP
+
+#anti busqueda furtiva de puertos (port scanner)
+$I46 -A INPUT -p tcp --tcp-flags SYN,ACK,FIN,RST RST -j portscan
+$I46 -A FORWARD -p tcp --tcp-flags SYN,ACK,FIN,RST RST -j portscan
+
+$I46 -A portscan $PORTSCAN_LIMITS -j RETURN
+if [ "$DROPLOG" = 1 ]
+then
+$I46 -A portscan -j LOG --log-level info --log-prefix "iptables:portscan:"
+fi
+$I46 -A portscan -j DROP
+
+#Descartar paquetes de inicio de sesion que no sean SYN, y registrar
+$I46 -A INPUT -p tcp ! --syn -m state --state NEW -j newnotsyn
+$I46 -A FORWARD -p tcp ! --syn -m state --state NEW -j newnotsyn
+if [ "$DROPLOG" = 1 ]
+then
+$I46 -A newnotsyn -j LOG --log-level info --log-prefix "iptables:newnotsyn:"
+fi
+$I46 -A newnotsyn -j RETURN
+
+#fragmentation-needed
+$I4 -A INPUT -p icmp --icmp-type 3/4 -j ACCEPT
+$I4 -A OUTPUT -p icmp --icmp-type 3/4 -j ACCEPT
+$I4 -A FORWARD -p icmp --icmp-type 3/4 -j ACCEPT
+$I6 -A INPUT -p icmpv6 --icmpv6-type 3/4 -j ACCEPT
+$I6 -A OUTPUT -p icmpv6 --icmpv6-type 3/4 -j ACCEPT
+$I6 -A FORWARD -p icmpv6 --icmpv6-type 3/4 -j ACCEPT
+
+#port-unreachable
+$I4 -A FORWARD -p icmp --icmp-type 3/3 -j ACCEPT
+$I4 -A OUTPUT -p icmp --icmp-type 3/3 -j ACCEPT
+$I4 -A INPUT -p icmp --icmp-type 3/3 -j ACCEPT
+$I6 -A FORWARD -p icmpv6 --icmpv6-type 3/3 -j ACCEPT
+$I6 -A OUTPUT -p icmpv6 --icmpv6-type 3/3 -j ACCEPT
+$I6 -A INPUT -p icmpv6 --icmpv6-type 3/3 -j ACCEPT
+
+#host-unreachable
+$I4 -A FORWARD -p icmp --icmp-type 3/1 -j ACCEPT
+$I4 -A INPUT -p icmp --icmp-type 3/1 -j ACCEPT
+$I4 -A OUTPUT -p icmp --icmp-type 3/1 -j ACCEPT
+$I6 -A FORWARD -p icmpv6 --icmpv6-type 3/1 -j ACCEPT
+$I6 -A INPUT -p icmpv6 --icmpv6-type 3/1 -j ACCEPT
+$I6 -A OUTPUT -p icmpv6 --icmpv6-type 3/1 -j ACCEPT
+
+# ICMP Source Quench
+$I4 -A INPUT -p icmp --icmp-type 4 -j ACCEPT
+$I4 -A OUTPUT -p icmp --icmp-type 4 -j ACCEPT
+$I4 -A FORWARD -p icmp --icmp-type 4 -j ACCEPT
+$I6 -A INPUT -p icmpv6 --icmpv6-type 4 -j ACCEPT
+$I6 -A OUTPUT -p icmpv6 --icmpv6-type 4 -j ACCEPT
+$I6 -A FORWARD -p icmpv6 --icmpv6-type 4 -j ACCEPT
+
+# allow error messages that are related to previously seen traffic
+# for ICMPv6 see http://www.ietf.org/rfc/rfc4890.txt
+
+for CHAIN in INPUT OUTPUT FORWARD
+do
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type destination-unreachable --match conntrack --ctstate ESTABLISHED,RELATED $ICMP6_LIMIT -j ACCEPT
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type packet-too-big --match conntrack --ctstate ESTABLISHED,RELATED $ICMP6_LIMIT -j ACCEPT
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type ttl-exceeded --match conntrack --ctstate ESTABLISHED,RELATED $ICMP6_LIMIT -j ACCEPT
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type parameter-problem --match conntrack --ctstate ESTABLISHED,RELATED $ICMP6_LIMIT -j ACCEPT
+
+# accept neighbor discovery (solicitation=135)
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type neighbor-solicitation $ICMP6_LIMIT -j ACCEPT
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type neighbor-advertisement $ICMP6_LIMIT -j ACCEPT
+
+# accept router discovery
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type router-solicitation '!' --src ff00::/8 $ICMP6_LIMIT -j ACCEPT
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type router-advertisement --src fe80::/10 $ICMP6_LIMIT -j ACCEPT
+
+# ping
+# accept replies to my ping requests
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type echo-reply --match conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# allow ping from my network(s)
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type echo-request $ICMP6_LIMIT -j ACCEPT
+
+# allow link-local unicast ping
+$I6 -A $CHAIN --dst fe80::/10 --protocol icmpv6 --icmpv6-type echo-request $ICMP6_LIMIT -j ACCEPT
+
+## allow multicast ping from local link
+$I6 -A $CHAIN --dst ff00::/8 --src fe80::/10 --protocol icmpv6 --icmpv6-type echo-request $ICMP6_LIMIT -j ACCEPT
+
+# multicast listener discovery v1
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type 130  -j ACCEPT
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type 131  -j ACCEPT
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type 132  -j ACCEPT
+
+# multicast listener discovery v2
+$I6 -A $CHAIN --protocol icmpv6 --icmpv6-type 143  -j ACCEPT
+
+done
+
+
+#LOAD BALANCER
+#BALANCE="ip route add default scope global "
+
+#lLen=${#IF_wan[@]}
+#for (( i=0; i<${lLen}; i++ ));
+#do
+#  printf "${IF_wan[$i]}=${IP_WAN[$i]}${IP_WAN_MASK[$i]} "
+#  #Crear tablas de rutas para balanceo de carga
+#  let tab=${i}+$ROUTING_TABLES_FIRST_ID
+#
+#  #interface reset
+#  execute "ip addr flush ${IF_wan[$i]}"
+#  execute "ip link set ${IF_wan[$i]} down"
+#  execute "ip addr add ${IP_WAN[$i]}${IP_WAN_MASK[$i]} dev ${IF_wan[$i]}"
+#  execute "ip link set ${IF_wan[$i]} up"
+#
+#  #Create auxiliary roting tables, starting at id=101
+#  execute "ip route flush table $tab"
+#  execute "ip route show table $tab"
+#  execute "ip route add ${NET_WAN[$i]} dev ${IF_wan[$i]} src ${IP_WAN[$i]} table $tab"
+#  execute "ip route show table $tab"
+#  execute "ip route add default via ${IPV4_ISP_WAN[$i]} table $tab"
+#  execute "ip route show table $tab"
+#
+#  execute "echo After Stage 1:"
+#  execute "ip route show table $tab"
+#
+#  #entries in routing table "main"
+#  execute "ip route add ${NET_WAN[$i]} dev ${IF_wan[$i]} src ${IP_WAN[$i]}"
+#
+#  execute "echo After Stage 2:"
+#  execute "ip route show"
+
+#  #routing rules. They choose what routing table to route with. You want to route out a given interface if you already have the
+#  #corresponding source address
+#  execute "ip rule add from ${IP_WAN[$i]} table $tab"
+
+#  execute "echo After Stage 3:"
+#  execute "ip rule show"
+
+#  #Rod Roark's rules:
+#  #1: for every LAN interface
+#  mLen=${#IF_LAN[@]}
+#  for (( j=0; j<${mLen}; j++ ));
+#  do
+#    execute "echo bucle 1"
+#    execute "ip route add ${NET_LAN[$j]} dev ${IF_LAN[$j]} table $tab"
+#  done
+#  #2: for every WAN interface
+#  mLen=${#IF_wan[@]}
+#  for (( j=0; j<${mLen}; j++ ));
+#  do
+#    if [ $i -ne $j ]
+#    then 
+#      execute "echo bucle 2"
+#      execute "ip route add ${NET_WAN[$j]} dev ${IF_wan[$j]} table $tab"
+#    fi
+#  done
+#  #3: local
+#  execute "ip route add 127.0.0.0/8 dev lo table $tab"
+
+#  #build up the load balancing rule, we will use it soon...
+#  BALANCE="${BALANCE} nexthop via ${IPV4_ISP_WAN[$i]} dev ${IF_wan[$i]} weight ${ISP_WEIGHT[$i]} "
+
+#done
+
+#UNBALANCE=${BALANCE//add/del}
+
+#default provider
+#if [ -n "$IPV4_DEFAULT_GATEWAY" ]
+#then
+#  execute "ip route add default via $IPV4_DEFAULT_GATEWAY"
+#fi
+
+#load balancing
+#execute "$BALANCE"
+
+#printf "\n\n"
+
+######################################################################
+#Abrir consultas DNS. Necesario para permitir reglas por nombre DNS 
+######################################################################
+printf "Opening DNS queries to servers into /etc/resolv.conf=[ "
+for H in `cat /etc/resolv.conf | sed "s/nameserver[ \t]*//" | tr '\n' ' '`
+do
+  DNS4=`isIPv4 $H`
+  DNS6=`isIPv6 $H`
+if [ $DNS4 == 1 ]
+then
+  printf "${H}; "
+  $I4 -A OUTPUT -p udp --dport 53 -d $H -j ACCEPT
+  $I4 -A OUTPUT -p tcp --dport 53 -d $H -j ACCEPT
+elif [ $DNS6 == 1 ]
+then
+  printf "${H}; "
+  $I6 -A OUTPUT -p udp --dport 53 -d $H -j ACCEPT
+  $I6 -A OUTPUT -p tcp --dport 53 -d $H -j ACCEPT
+fi
+done
+printf "]\n"
+
+printf "Opening DNS queries specified into IPV4_DNS_INTRANET=[ "
+iLen=${#IPV4_DNS_INTRANET[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  printf "${IPV4_DNS_INTRANET[$i]}; "
+  $I4 -A FORWARD -p udp --dport 53 -s ${IPV4_DNS_INTRANET[$i]} -j ACCEPT
+  $I4 -A FORWARD -p tcp --dport 53 -s ${IPV4_DNS_INTRANET[$i]} -j ACCEPT
+done
+printf "]\n"
+
+printf "Opening DNS queries specified into IPV6_DNS_INTRANET=[ "
+iLen=${#IPV6_DNS_INTRANET[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  printf "${IPV6_DNS_INTRANET[$i]}; "
+  $I6 -A FORWARD -p udp --dport 53 -s ${IPV6_DNS_INTRANET[$i]} -j ACCEPT
+  $I6 -A FORWARD -p tcp --dport 53 -s ${IPV6_DNS_INTRANET[$i]} -j ACCEPT
+done
+printf "]\n\n"
+
+
+######################################################################
+#Aceptar sistemas de trafico IPV4_OPEN
+######################################################################
+
+printf "\nOpening IPV4_OPEN=[ "
+lLen=${#IPV4_OPEN[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${IPV4_OPEN[$i]}; "
+  $I4 -A INPUT -s ${IPV4_OPEN[$i]} -j ACCEPT
+  $I4 -A OUTPUT -d ${IPV4_OPEN[$i]} -j ACCEPT
+  $I4 -A FORWARD -s ${IPV4_OPEN[$i]} -j ACCEPT
+  $I4 -A FORWARD -d ${IPV4_OPEN[$i]} -j ACCEPT
+done
+printf "]\n"
+
+######################################################################
+#Bloquear sistemas de trafico IPV4_CLOSED
+######################################################################
+
+printf "Closing IPV4_CLOSED=[ "
+lLen=${#IPV4_CLOSED[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${IPV4_CLOSED[$i]}; "
+  $I4 -A INPUT -s ${IPV4_CLOSED[$i]} -j $REJECT_POLICY
+  $I4 -A OUTPUT -d ${IPV4_CLOSED[$i]} -j $REJECT_POLICY
+  $I4 -A FORWARD -s ${IPV4_CLOSED[$i]} -j $REJECT_POLICY
+  $I4 -A FORWARD -d ${IPV4_CLOSED[$i]} -j $REJECT_POLICY
+done
+printf "]\n"
+
+######################################################################
+#Aceptar sistemas de trafico IPV6_OPEN
+######################################################################
+
+printf "\nOpening IPV6_OPEN=[ "
+lLen=${#IPV6_OPEN[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${IPV6_OPEN[$i]}; "
+  $I6 -A INPUT -s ${IPV6_OPEN[$i]} -j ACCEPT
+  $I6 -A OUTPUT -d ${IPV6_OPEN[$i]} -j ACCEPT
+  $I6 -A FORWARD -s ${IPV6_OPEN[$i]} -j ACCEPT
+  $I6 -A FORWARD -d ${IPV6_OPEN[$i]} -j ACCEPT
+done
+printf "]\n"
+
+######################################################################
+#Bloquear sistemas de trafico IPV6_CLOSED
+######################################################################
+
+printf "Closing IPV6_CLOSED=[ "
+lLen=${#IPV6_CLOSED[@]}
+for (( i=0; i<${lLen}; i++ ));
+do
+  printf "${IPV6_CLOSED[$i]}; "
+  $I6 -A INPUT -s ${IPV6_CLOSED[$i]} -j $REJECT_POLICY
+  $I6 -A OUTPUT -d ${IPV6_CLOSED[$i]} -j $REJECT_POLICY
+  $I6 -A FORWARD -s ${IPV6_CLOSED[$i]} -j $REJECT_POLICY
+  $I6 -A FORWARD -d ${IPV6_CLOSED[$i]} -j $REJECT_POLICY
+done
+printf "]\n\n"
+
+######################################################################
+# NAT
+######################################################################
+#Destinos: ACCEPT, DROP, QUEUE, RETURN
+
+printf "Preparing SNAT:\n"
+iLen=${#IF_wan[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  IP4=`isIPv4 ${TO_SOURCE[$i]}`
+  if [ $IP4 == 1 ]
+  then
+    echo ${IF_wan[$i]} --to-source ${TO_SOURCE[$i]}
+    $I4 -t nat -A POSTROUTING -o ${IF_wan[$i]} -j SNAT --to-source ${TO_SOURCE[$i]}
+  fi
+done
+printf "\n\n"
+
+
+######################################################################
+# Proxy transparente HTTP (squid)
+######################################################################
+#Técnica:
+# 1) marcado de los paquetes con destino a puertos 80,443 no procedentes de maquinas con derecho a acceso directo a dicho puerto
+# 2) reenvio a proxy mediante policy routing
+# 3) reenvio interno de puertos en el proxy (en el proxy)
+
+#Proxy transparente HTTP (squid)
+if [ ! -z "${TRANSPARENT_MARK}" -a ! -z "${TRANSPARENT_TABLE}" -a ! -z "${IPV4_SQUID_BOX}" -a ! -z "${IPV4_SQUID_BOX_IF}" ]
+then
+echo
+echo Transparent Proxy: $IPV4_SQUID_BOX via $IPV4_SQUID_BOX_IF...
+#Fase 1)
+printf "Captured Ports=[ "
+iLen=${#IPV4_SQUID_BOX_CAPTURE_PORTS[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  printf "${IPV4_SQUID_BOX_CAPTURE_PORTS[$i]} "
+  qLen=${#IF_LAN[@]}
+  for (( j=0; j<${qLen}; j++ ));
+  do
+    #este viene del proxy, le dejamos pasar
+    $I4 -t mangle -A PREROUTING -p tcp -i ${SQUID_BOX_IF} -s ${IPV4_SQUID_BOX} --dport ${IPV4_SQUID_BOX_CAPTURE_PORTS[$i]} -j ACCEPT
+  done
+done
+printf "]\n\n"
+printf "NO Transparent=[ "
+iLen=${#NO_TRANSPARENT[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  printf "${NO_TRANSPARENT[$i]}(${NO_TRANSPARENT_IF[$i]}); "
+  #este se acepta sin hacer nada, es de uno permitido
+  $I4 -t mangle -A PREROUTING -p tcp -s ${NO_TRANSPARENT[$i]} -i ${NO_TRANSPARENT_IF[$i]} -j ACCEPT
+done
+printf "]\n\n"
+#resto de maquinas intentando salir directamente:
+printf "Transparent=[ "
+kLen=${#TRANSPARENT[@]}
+for (( k=0; k<${kLen}; k++ ));
+do
+  printf "${TRANSPARENT[$k]}(${TRANSPARENT_IF[$k]}); "
+  iLen=${#IPV4_SQUID_BOX_CAPTURE_PORTS[@]}
+  for (( i=0; i<${iLen}; i++ ));
+  do
+    $I4 -t mangle -A PREROUTING -p tcp -s ${TRANSPARENT[$k]} -i ${TRANSPARENT_IF[$k]} --dport ${IPV4_SQUID_BOX_CAPTURE_PORTS[$i]} -j MARK --set-mark $TRANSPARENT_MARK
+  done
+done
+printf "]\n\n"
+
+#Fase 2)
+MARK_TRANSPARENT="ip rule add fwmark $TRANSPARENT_MARK table $TRANSPARENT_TABLE"
+ROUTE_TRANSPARENT="ip route add default via $IPV4_SQUID_BOX dev $IPV4_SQUID_BOX_IF table $TRANSPARENT_TABLE"
+
+UNMARK_TRANSPARENT=${MARK_TRANSPARENT//add/del}
+UNROUTE_TRANSPARENT=${ROUTE_TRANSPARENT//add/del}
+
+execute "$MARK_TRANSPARENT"
+execute "$ROUTE_TRANSPARENT"
+fi
+
+
+######################################################################
+#Aceptar todo el trafico desde/hacia interfaz local
+######################################################################
+$I46 -A INPUT -i $IF_lo -j ACCEPT
+$I46 -A OUTPUT -o $IF_lo -j ACCEPT
+
+######################################################################
+# inputs and outputs from zones
+######################################################################
+
+for (( i = 0 ; i < ${#ZONES[@]} ; i++ ))
+do
+    FZ=${ZONES[$i]}
+    ZN_IN=${FZ}${TO}${FIREWALL}
+    ZN_OUT=${FIREWALL}${TO}${FZ}
+    if [ -r "${CONFDIR}/${ZN_IN}" ]
+    then
+      firewall_in_out $ZN_IN
+    fi
+    if [ -r "${CONFDIR}/${ZN_OUT}" ]
+    then
+      firewall_in_out $ZN_OUT
+    fi
+done
+
+######################################################################
+# Reenvios del segmento lan al segmento lan, wan, dmz
+######################################################################
+
+for (( i = 0 ; i < ${#ZONES[@]} ; i++ ))
+do
+  for (( j = 0 ; j < ${#ZONES[@]} ; j++ ))
+  do
+    FZ=${ZONES[$i]}
+    TZ=${ZONES[$j]}
+
+    ZN=${FZ}${TO}${TZ}
+    if [ -r "${CONFDIR}/${ZN}" ]
+    then
+      zone_to_zone $ZN
+    fi
+  done
+done
+
+
+#############################################################################
+# Reglas de derivacion a las subcadenas. SON LAS ULTIMAS QUE DEBEN EJECUTARSE
+#############################################################################
+
+#zone-to-zone
+for (( i = 0 ; i < ${#ZONES[@]} ; i++ ))
+do
+  FZ=${ZONES[$i]}
+  for (( j = 0 ; j < ${#ZONES[@]} ; j++ ))
+  do
+    TZ=${ZONES[$j]}
+    ZN=${FZ}${TO}${TZ}
+    if [ -r "${CONFDIR}/${ZN}" ]
+    then
+      IF_FZ=IF_"${FZ}"	#FROM-ZONE interfaces
+      IF_TZ=IF_"${TZ}"	#TO-ZONE interfaces
+      array_fz="${IF_FZ}[@]"
+      array_tz="${IF_TZ}[@]"
+
+      for fi in "${!array_fz}"; do
+        for ti in "${!array_tz}"; do
+           $I46 -A FORWARD -i $fi -o $ti -j $ZN
+        done
+      done
+    fi
+  done
+done
+
+#zone-to-fw
+for (( i = 0 ; i < ${#ZONES[@]} ; i++ ))
+do
+  TZ=${FIREWALL}
+  FZ=${ZONES[$i]}
+  ZN=${FZ}${TO}${TZ}
+  if [ -r "${CONFDIR}/${ZN}" ]
+  then
+      IF_FZ=IF_"${FZ}"	#FROM-ZONE interfaces
+      array_fz="${IF_FZ}[@]"
+      for fi in "${!array_fz}"; do
+           $I46 -A INPUT -i $fi -m state --state NEW -j $ZN
+      done
+  fi
+done
+
+#fw-to-zone
+for (( i = 0 ; i < ${#ZONES[@]} ; i++ ))
+do
+  FZ=${FIREWALL}
+  TZ=${ZONES[$i]}
+  ZN=${FZ}${TO}${TZ}
+  if [ -r "${CONFDIR}/${ZN}" ]
+  then
+      IF_TZ=IF_"${TZ}"	#FROM-ZONE interfaces
+      array_tz="${IF_TZ}[@]"
+      for ti in "${!array_tz}"; do
+           $I46 -A OUTPUT -o $ti -m state --state NEW -j $ZN
+      done
+  fi
+done
+
+# Activar reenvio 
+execute "echo 1 > /proc/sys/net/ipv4/ip_forward"
+execute "echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"
+
+# Evitar ataques smurf
+execute "echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts"
+# No aceptar enrutamiento en origen
+execute "echo 0 > /proc/sys/net/ipv4/conf/all/accept_source_route"
+# anti ip spoofing, DA PROBLEMAS CON VLANs
+execute "echo 0 > /proc/sys/net/ipv4/conf/default/rp_filter"
+execute "echo 0 > /proc/sys/net/ipv4/conf/all/rp_filter"
+
+echo
+
+if [ -f "$CONFDIR/post.rules" ]
+then
+  echo "running post.rules..."
+  . $CONFDIR/post.rules
+fi
+
+######################################################################
+# Reglas finales
+######################################################################
+
+#if [ -n "$DROPLOG" ]
+#then
+#  $I46 -A INPUT -j droplog
+#  $I46 -A FORWARD -j droplog
+#  $I46 -A OUTPUT -j droplog
+#  $I4 -A droplog -j LOG --log-level info --log-prefix "iptables:dropped:"
+#  $I6 -A droplog -j LOG --log-level info --log-prefix "ip6tables:dropped:"
+#fi
+
+echo
+}
+
+
+halfstop()
+{
+echo \#`date` > $OUTPUT
+echo
+echo
+# Desactivar reenvio provisionalmente
+execute "echo 0 > /proc/sys/net/ipv4/ip_forward"
+execute "echo 0 > /proc/sys/net/ipv6/conf/all/forwarding"
+empty_mangle
+$I46 -P INPUT ACCEPT
+$I46 -P FORWARD ACCEPT
+$I46 -P OUTPUT ACCEPT
+iLen=${#IF_wan[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  IP4=`isIPv4 ${TO_SOURCE[$i]}`
+  if [ $IP4 == 1 ]
+  then
+    $I4 -t nat -A POSTROUTING -o ${IF_wan[$i]} -j SNAT --to-source ${TO_SOURCE[$i]}
+  fi
+done
+if [ ! -z "$IPV4_SQUID_BOX" -a ! -z "$IPV4_SQUID_BOX_IF" -a ! -z "$MARK" -a ! -z "$TABLE" ]
+then
+  execute "$UNMARK_TRANSPARENT"
+  execute "$UNROUTE_TRANSPARENT"
+  execute "ip rule del fwmark $MARK table $TABLE"
+#  execute "ip route del default via $IPV4_SQUID_BOX dev $IPV4_SQUID_BOX_IF table $TABLE"
+fi
+
+#LOAD BALANCER: flush all auxiliary routing tables
+#lLen=${#IF_wan[@]}
+#for (( i=0; i<${lLen}; i++ ));
+#do
+#  let tab=${i}+$ROUTING_TABLES_FIRST_ID
+#  execute "ip route flush table $tab"
+#  execute "ip rule del from ${IP_WAN[$i]} table $tab"
+#done
+
+#flush default routes
+#execute "ip route flush default"
+
+
+#default provider
+#if [ -n "$IPV4_DEFAULT_GATEWAY" ]
+#then
+#  execute "ip route add default via $IPV4_DEFAULT_GATEWAY"
+#fi
+}
+
+
+stop()
+{
+echo \#`date` > $OUTPUT
+echo
+echo
+# Desactivar reenvio provisionalmente
+execute "echo 0 > /proc/sys/net/ipv4/ip_forward"
+execute "echo 0 > /proc/sys/net/ipv6/conf/all/forwarding"
+empty_chains
+$I46 -P INPUT ACCEPT
+$I46 -P FORWARD ACCEPT
+$I46 -P OUTPUT ACCEPT
+iLen=${#IF_wan[@]}
+for (( i=0; i<${iLen}; i++ ));
+do
+  IP4=`isIPv4 ${TO_SOURCE[$i]}`
+  if [ $IP4 == 1 ]
+  then
+    $I4 -t nat -A POSTROUTING -o ${IF_wan[$i]} -j SNAT --to-source ${TO_SOURCE[$i]}
+  fi
+done
+if [ ! -z "$IPV4_SQUID_BOX" -a ! -z "$IPV4_SQUID_BOX_IF" -a ! -z "$MARK" -a ! -z "$TABLE" ]
+then
+  execute "$UNMARK_TRANSPARENT"
+  execute "$UNROUTE_TRANSPARENT"
+#  execute "ip rule del fwmark $MARK table $TABLE"
+#  execute "ip route del default via $IPV4_SQUID_BOX dev $IPV4_SQUID_BOX_IF table $TABLE"
+fi
+
+#LOAD BALANCER: flush all auxiliary routing tables
+#lLen=${#IF_wan[@]}
+#for (( i=0; i<${lLen}; i++ ));
+#do
+#  let tab=${i}+$ROUTING_TABLES_FIRST_ID
+#  execute "ip route flush table $tab"
+#  execute "ip rule del from ${IP_WAN[$i]} table $tab"
+#done
+
+#flush default routes
+#execute "ip route flush default"
+
+#default provider
+#if [ -n "$IPV4_DEFAULT_GATEWAY" ]
+#then
+#  execute "ip route add default via $IPV4_DEFAULT_GATEWAY"
+#fi
+}
+
+if [ $# -eq 0 ]
+then
+  echo "$0 {start | stop | halfstop | restart | status | save | restore }"
+  exit 1
+else
+  case "$1" in
+    stop)
+	stop
+    ;;
+    halfstop)
+	halfstop
+    ;;
+    start|restart)
+    	stop
+	start
+    ;;
+    save)
+	mkdir -p `dirname "$SAVE"` 2>/dev/null
+	iptables-save > "$SAVE"
+    ;;
+    restore)
+	iptables-restore "$SAVE"
+    ;;
+    status)
+	echo; echo "TABLE filter ----------------------------------------------"
+	iptables --list -n -v -t filter
+	echo; echo "TABLE nat -------------------------------------------------"
+	iptables --list -n -v -t nat
+	echo; echo "TABLE mangle ----------------------------------------------"
+	iptables --list -n -v -t mangle
+    ;;
+  esac
+fi
+
+

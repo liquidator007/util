@@ -1,0 +1,32 @@
+#!/bin/bash
+#resumen BOE
+
+trap 'echo Recibido SIGTERM; exit 1' SIGTERM
+trap 'echo Recibido SIGKILL; exit 1' SIGKILL
+
+PATH=$PATH:/util:/bin:/usr/bin
+
+C=`basename $0`
+LOG=/tmp/$C.log
+
+if [ $# -ne 0 ]
+then
+  printf "\n\nUso:\n\t $C\n\n"
+  exit 1
+fi
+
+MIRROR=/var/spool/mirrors
+BOES=$MIRROR/www.carm.es/borm/borm_lib/pdf
+
+cd $BOES
+
+echo Calculando...
+printf "%4s %4s %4s\n" Tamaño Año "Nº Dias"
+for A in ????
+do
+  printf "%6s %4d %7d\n" `du -hs $A` `ls -1 $A | wc -l`
+done
+echo
+echo Tamaño Total: `du -hs .`
+echo
+echo fin

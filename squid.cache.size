@@ -1,0 +1,3 @@
+echo Espere '(puede tardar...)'
+
+du -hs /var/spool/squid*

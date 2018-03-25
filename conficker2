@@ -1,0 +1,6 @@
+P="Nmap scan report for"
+
+for IP in `nmap -sn $* | fgrep "$P" | sed "s/$P//"`
+do
+  /opt/scs2.2/scanner21.py $IP
+done

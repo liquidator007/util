@@ -1,0 +1,15 @@
+#!/bin/bash
+
+SRC=/media/MEDIA1_DATA
+SIN="SIN CLASIFICAR"
+SRC_DEV=/dev/disk/by-label/MEDIA1_DATA
+
+echo Borrando de la carpeta $SIN los ficheros con mas de 1 hard link...
+
+sudo mkdir -p $SRC 2>/dev/null
+
+sudo mount -t auto -o rw $SRC_DEV $SRC
+
+find "$SRC/$SIN" -links +1 -print -exec rm {} \;
+
+sudo mount -o rw,remount $SRC_DEV

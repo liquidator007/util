@@ -1,0 +1,26 @@
+if [ $# -ne 4 ]
+then
+  printf "\nUso:\n\t$0 uid uidNumber gidNumber homeDirectory\n\n"
+  exit 1
+fi
+
+#La contraseña por defecto es "cambiame"
+
+echo dn: uid=$1,ou=bach09,ou=People,dc=iescierva,dc=net
+echo uid: $1
+echo cn: $1
+echo objectClass: account
+echo objectClass: posixAccount
+echo objectClass: top
+echo objectClass: shadowAccount
+echo shadowMax: 99999
+echo shadowWarning: 7
+echo loginShell: /bin/bash
+echo uidNumber: $2
+echo gidNumber: $3
+echo homeDirectory: $4
+echo shadowLastChange: 13847
+echo 'userPassword: {CRYPT}$1$QcGG/sQu$jDUhMvuSf9q3Yl.PL6aE3.'
+echo
+
+#la contraseña por defecto es "cambiame"

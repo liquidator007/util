@@ -1,0 +1,4 @@
+#!/bin/sh
+/bin/echo "Reinstalando la ruta por omision..."
+/sbin/route del default
+/sbin/route add default ippp0

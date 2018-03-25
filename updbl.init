@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#parametrizacion
+RUTA_DIFFS=/etc/dansguardian/bl.update
+RUTA_BLACK=/etc/dansguardian/blacklists
+RUTA_TAR=`dirname $RUTA_BLACK`
+TEST_FILE=NOMEBORRES.NONONO
+
+if [ ! -r "$1" ]
+then
+  #si el fichero que contiene la lista negra no es legible...
+  printf "\nUso:\n\t$0 ruta-a-bigblacklist.tar.gz\n\n"
+  exit 1
+fi
+
+#ya no necesitaremos esto
+B1=`basename $RUTA_DIFFS`
+B2=`basename $RUTA_BLACK`
+rm -rf /tmp/$B1 /tmp/$B2 2>/dev/null
+mv $RUTA_DIFFS $RUTA_BLACK /tmp
+mkdir -p $RUTA_DIFFS 2>/dev/null
+mkdir -p $RUTA_BLACK 2>/dev/null
+tar --directory "$RUTA_TAR" -zxf "$1"
+touch --reference="$1" $RUTA_BLACK/$TEST_FILE
+
+#actualizar
+FECHA_BASE=`ls -l "$1" | cut -d' ' -f6`
+FECHA_ACTU=`date +"%Y-%m-%d"`
+
+DIAS=`echo $"(( $(date --date="$FECHA_ACTU" +%s) - $(date --date="$FECHA_BASE" +%s) ))/(60*60*24)"|bc`
+
+echo Aplicando parches de $DIAS dias...
+
+/util/updbl $DIAS

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+sudo rm -f /tmp/mediatomb-priv.html
+
+mediatomb -c /etc/mediatomb/config-priv.xml  -u mim -g mediatomb -e br0 || \
+mediatomb -c /etc/mediatomb/config-priv.xml  -u mim -g mediatomb -e eth0 || \
+mediatomb -c /etc/mediatomb/config-priv.xml  -u mim -g mediatomb -e wlan0 

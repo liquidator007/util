@@ -1,0 +1,125 @@
+#!/bin/bash
+
+## remuxerator to remux AVC video into PS3-friendly form
+# requires: mkvtoolnix (mkvmerge, mkvextract), ffmpeg, mplayer, gpac (MP4Box), zenity
+
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# let's have some progress meters.  there's no kill like overkill.
+DisplayProgress () {
+	inputlength=`mplayer -identify -frames 0 -vc null -vo null -ao null \
+               "$INPUT_F" 2>/dev/null | grep ^ID_LENGTH | sed -e 's/^.*=//' -e 's/[.].*//'`
+    (
+      while ps | grep "$pid " >/dev/null
+      do
+        secondsCompleted=`tail -c 90 "/tmp/ffmpegalog.log" | awk -F"time=" {'print $2'} | cut -d"." -f 1`
+        [ -n "$secondsCompleted" ] || secondsCompleted=0
+        percentage=$((100*$secondsCompleted/$inputlength))
+        echo "$percentage"
+        sleep 1
+      done
+      echo 100
+    ) | zenity --progress --title="Re-encoding audio - ${inputlength}s" \
+               --text="" --auto-close --auto-kill --width=500
+}
+
+DemuxProgress () {
+    (
+      while ps | grep "$pid " >/dev/null
+      do
+	perCentCompleted=`tail -c 90 "/tmp/mkvx.log" | sed 's/.*gress://g' | sed 's/\%//'`
+	echo $perCentCompleted
+        sleep 0.1
+      done
+      echo 100
+    )  | zenity --progress --title="Demuxing A/V streams" --text="" --auto-close --auto-kill --width=500
+
+}
+
+# filezpls
+args=("$@")
+if [ -z ${args[0]} ]; then
+	INPUT_F=`zenity --file-selection --title="Choose some AVC video to remux"`
+else
+	INPUT_F=${args[0]}
+fi
+OUTPUT_F="${INPUT_F}.remuxed.mp4"
+
+# fps pls - this has to be bang-on perfect otherwise a/v will desync.
+FPS=`mplayer -identify -frames 0 -vc null -vo null -ao null \
+               "$INPUT_F" 2>/dev/null | grep ^ID_VIDEO_FPS | sed -e 's/^.*=//'`
+FRAME_RATE=`zenity --entry --text="Choose a frame rate in fps" --entry-text="${FPS}" --title="eff pee ess"`
+
+
+## remux chain
+# and, for a million extra points, add PROPER subtitle support.
+
+# identify A/V streams
+STRM_INFO=`mkvmerge -i "$INPUT_F"`
+STREAMS=`echo $STRM_INFO | sed 's/File.*ska//' | sed 's/Track ID //g'  | sed 's/(V.*AVC)//'`
+V_STREAM=`echo $STREAMS| sed 's/.: audio (.*)//' | sed 's/: video//' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+A_INFO=`echo $STREAMS| sed 's/.: video //' | sed 's/: audio//' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+A_STREAM=`echo $A_INFO | sed 's/.(.*//' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+A_TYPE=`echo $A_INFO | sed 's/^..(A_//' | sed 's/).*//' | awk '{print tolower($1)}' | sed 's/^[ \t]*//;s/[ \t]*$//'`
+
+
+# show STRM_INFO in a zenity box? "Please select video stream" 
+# worth keeping to make sure the above sedwork works
+V_STREAM=`zenity --entry --text="${STRM_INFO} 
+
+Please enter which stream number is video" --entry-text="${V_STREAM}" --title="V_STREAM"`
+
+A_STREAM=`zenity --entry --text="${STRM_INFO} 
+
+Please enter which stream number is audio" --entry-text="${A_STREAM}" --title="A_STREAM"`
+
+A_EXT=`zenity --entry --text="${STRM_INFO} 
+
+Please enter audio type file extension (ac3/aac)" --entry-text="${A_TYPE}" --title="A_TYPE"`
+
+zenity --question --text="Press OK to start remuxing, or cancel to stop now." --title="Ready to go"
+if [ $? != 0 ]; then
+	exit
+fi
+
+# extract A/V streams
+mkvextract tracks "${INPUT_F}" "${V_STREAM}:${INPUT_F}.tmp.video.h264" "${A_STREAM}:${INPUT_F}.tmp.audio.${A_EXT}" > /tmp/mkvx.log &
+pid=$!
+DemuxProgress
+
+# convert audio to AAC, downmix to stereo (src usually 5.1)
+ffmpeg -i "${INPUT_F}.tmp.audio.${A_EXT}" -acodec libfaac -ac 2 -ab 256k -threads 4 "${INPUT_F}.tmp.audio_final.aac" 2>> /tmp/ffmpegalog.log &
+pid=$!
+DisplayProgress
+zenity --info --text="Audio conversion complete - preparing to mux" &
+
+# change apparent h264 level to 4.1
+# replace first "64 00 xx" with "64 00 29" in video file, to fool the PS3.
+# mmmm, DIRRTY.
+PYPROG="import re; bf = file('${INPUT_F}.tmp.video.h264', \"r+\"); nh = re.sub(\"\x64\x00[\x00-\x99]\", \"\x64\x00\x29\", bf.read(1024)); bf.seek(0); bf.write(nh);"
+python -c "${PYPROG}"
+
+# remux into MP4
+MP4Box -add "${INPUT_F}.tmp.video.h264" -add "${INPUT_F}.tmp.audio_final.aac" -fps $FPS "$OUTPUT_F"
+
+# tidy up
+rm "${INPUT_F}.tmp.video.h264"
+rm "${INPUT_F}.tmp.audio.${A_EXT}"
+rm "${INPUT_F}.tmp.audio_final.aac"
+rm /tmp/ffmpegalog.log
+rm /tmp/mkvx.log
+
+# let the user know
+zenity --info --text="Remuxing complete"

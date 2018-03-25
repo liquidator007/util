@@ -1,0 +1,22 @@
+if [ $# -eq 0 ]
+then
+  printf "\n\nUso: $0 perfil  <opciones aireplay-ng>\n\n"
+  exit 1
+fi
+
+. $1
+
+tmpfich=/tmp/wifi-scripts
+. $tmpfich
+
+ejecutar()
+{
+  printf "Ejecutando: $1...\n\n"
+  sh -c "$1"
+}
+
+shift
+
+ejecutar "iwconfig $IF channel $CH"
+ejecutar "aireplay-ng --fragment -e $ESSID -a $BSSID -h $FAKE $IF $*"
+

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ $# -ne 4 ]
+then
+  printf "\n\nUsage:\n\t$0 src-snapshot ssh.privkey dest-host dest-dataset\n\n\n"
+  exit 1
+fi
+
+echo zfs send "${1}" \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
+zfs send "${1}" | ssh -i "${2}" "${3}" zfs recv -F "${4}"

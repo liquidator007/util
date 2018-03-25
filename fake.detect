@@ -1,0 +1,28 @@
+#!/bin/bash
+
+#buscar ficheros cuyo contenido no coincide con lo detectado por "file"
+
+TABLE=/util/fake.table
+
+for F in "$*"
+do
+  EXT=${F##*\.}
+  FILE=`file -b "$F"`
+  QUE=`grep -i $EXT $TABLE | cut -f2 -d':'`
+  grep -i -q  "$QUE" <<!
+$FILE
+!
+R=$?
+
+if [ $R -eq 2 ]
+then
+  echo $EXT no está en la tabla $TABLE
+  exit 1
+fi
+
+if [ $R -eq 1 ]
+then
+  echo $F: $FILE
+fi
+
+done

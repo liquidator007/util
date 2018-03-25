@@ -1,0 +1,53 @@
+#!/bin/bash
+##############################################
+# SCRIPT PARA AVISOS DE TEMPERATURA EXCESIVA
+# NECESITA lm-sensors y mailutils
+##############################################
+
+#########################################
+# VARIABLES A CONFIGURAR
+# Receptores del correo:
+to="mibanezm@gmail.com jose@jcmc.es jcmc@iescierva.net a.rocal@gmail.com apelegrin@gmail.com agu.inf@gmail.com prof.inf@gmail.com emilio.penalver@murciaeduca.es cayerei@gmail.com"
+# Temperaturas de aviso (tWarning) y de aviso y apagado (tHalt):
+tWarning=75
+tHalt=85
+tSleep=10
+#########################################
+
+
+temp=`sensors|grep 'Core 0'|cut -d "+" -f2|cut -d "." -f1`
+
+if [ $temp -ge ${tWarning} ]
+then
+  tmp=`tempfile`
+  fecha=`date "+%Y%m%d_%H%M%S"`
+  subject="Host: $HOSTNAME: temperatura excesiva (${temp}º)"
+ 
+  printf "*Fecha: ${fecha}*\n" > $tmp 
+  printf "*Temperatura: ${temp}*\n" >> $tmp
+  printf "*Host: ${HOSTNAME}*\n" >> $tmp
+  printf "\n\n" >> $tmp
+
+  if [ ${temp} -ge ${tHalt} ]; then
+         logger -s "La temperatura del servidor $HOSTNAME es de $temp ºC, extremadamente alta" 2>> $tmp
+         logger -s "Se va a proceder al apagado del servidor $HOSTNAME" 2>> $tmp
+         printf "\n\nTOP:\n" >> $tmp
+         top -b -n 1 >> $tmp
+         cat $tmp|mailx -s "*HALT* $subject" ${to}
+	 cat $tmp
+	 sleep  $tSleep
+	 init 0
+  elif [ ${temp} -gt ${tWarning} ]; then
+         logger -s "La temperatura del servidor $HOSTNAME es de $temp ºC. No debería alcanzar los $tHalt ºC" 2>> ${tmp}
+         logger -s "Posible apagado del sistema si la situación no mejora" 2>> $tmp
+         printf "\n\nTOP:\n" >> $tmp
+         top -b -n 1 >> $tmp
+         cat $tmp|mailx -s "*WARNING* $subject" ${to}
+	 cat $tmp
+	 exit 0
+  fi
+
+else 
+  logger -s "Host: $HOSTNAME, Temperatura: ${temp}" 
+  exit 0
+fi

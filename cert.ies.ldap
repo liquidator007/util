@@ -1,0 +1,8 @@
+cd /certs
+openssl req -new -nodes -keyout newreq.pem -out newreq.pem
+/util/CA.sh -sign
+
+mv newcert.pem ies_ldap.pem
+mv newreq.pem ies_ldap_key.pem
+chmod 640 ies_ldap_key.pem
+chown root.openldap ies_ldap_key.pem

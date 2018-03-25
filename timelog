@@ -1,0 +1,22 @@
+#!/bin/bash
+
+#Nota: este script no hace la correccion de verano
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUso:\n\t$0 timestamp\n\n"
+  exit 1
+fi
+
+TIMESTAMP=$1
+
+#varias formas de hacerlo, mas o menos complicadas
+#DATE=$(perl -e “require ‘ctime.pl’; print &ctime($TIMESTAMP);”)
+#DATE=$(perl -e “print scalar(localtime($TIMESTAMP))”)
+#DATE=$(echo $TIMESTAMP|awk ‘{print strftime(”%c”,$1)}’)
+#DATE=$(awk “BEGIN { print strftime(\”%c\”,$TIMESTAMP) }”)
+
+#la belleza de lo simple
+date -d "1970-01-01 $TIMESTAMP sec"
+
+#echo $DATE

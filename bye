@@ -1,0 +1,9 @@
+SISTEMA=`uname`
+if [ $SISTEMA = "Linux" ]
+then
+	shutdown -h now
+else
+	shutdown -g0 <<!
+y
+!
+fi

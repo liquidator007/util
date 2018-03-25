@@ -1,0 +1,19 @@
+if [ $# -eq 0 ]
+then
+  printf "\nUso:\n\t$0 diccionario...\n"
+  exit 1
+fi
+
+DICTS=$1
+shift
+
+for D in $*
+do
+  if [ -f $D -a -r $D ]
+  then
+	  DICTS="$DICTS $D"
+  fi
+done
+
+uniq <( cat $DICTS ) > /tmp/dicts.txt
+john -w=/tmp/dicts.txt --rules --stdout
