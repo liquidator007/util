@@ -1,0 +1,27 @@
+#!/bin/bash
+
+if [ $# -ne 0 ]
+then
+  printf "\n\nUsage:\n\t$0\n\n"
+  exit 1
+fi
+
+DHCP=/etc/dhcp/dhcpd.conf
+WOL=/tmp/wol
+OUTPUT=/util/wol.data
+
+echo reading your $DHCP and extracting network parameters...
+cat $DHCP | /util/dhcpparse.awk | grep -v '^;' > "$WOL"
+
+echo splitting data...
+cut -d';' -f1 "$WOL" > "${WOL}.ip"
+cut -d';' -f2 "$WOL" > "${WOL}.mac"
+cut -d';' -f3 "$WOL" > "${WOL}.host"
+
+echo calculating broadcasts...
+( while read LINE ; do echo `/util/broadcast.address $LINE/24`; done ) < "${WOL}.ip" > "${WOL}.netmask"
+
+echo rejoining data...
+paste -d';' "${WOL}.netmask" "${WOL}.mac" "${WOL}.host" "${WOL}.ip" > "$OUTPUT"
+
+echo `wc -l "$OUTPUT"| cut -f1 -d' '` records on your $DHCP have been sent to $OUTPUT

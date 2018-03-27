@@ -1,0 +1,83 @@
+#!/bin/bash
+
+#zfs.send.incremental.mbuffer
+#sends the last snapshot of the selected dataset to other machine/dataset, detecting the last, common dataset previously synchronized, in order to optimize incremental transmission
+
+BLKSIZE=128k
+BUFSIZE=1G
+
+if [ $# -ne 5 ]
+then
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset port\n\n\n"
+  exit 1
+fi
+
+sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | cut -f 2 -d'@' | sort > /tmp/snap_local
+R1=$?
+ssh -i $2 $3 "zfs list -t snapshot -d 1 ${4} -H -o name -s creation | cut -f 2 -d'@' | sort" > /tmp/snap_remote
+R2=$?
+
+if [ $R1 -ne 0 ]
+then 
+  printf "could't read the local snapshot list for ${1}\n"
+  exit 1
+fi
+if [ $R2 -ne 0 ]
+then 
+  printf "could't read the remote snapshot list for ${1}\n"
+  exit 1
+fi
+
+LASTCOMMON=${1}@$(comm -1 -2 /tmp/snap_local /tmp/snap_remote |  awk -F'[ -]' '{print $4$5$6$7,$0}' | sort | tail -1 | cut -f2 -d' ')
+LASTLOCAL=$(sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | tail -1 )
+
+echo Last common snapshot: $LASTCOMMON
+echo Last local snapshot: $LASTLOCAL
+
+if [ -z "$LASTCOMMON" ]
+then
+  printf "couldn't find a common snapshot\n"
+  exit 1
+fi
+
+if [ "$LASTLOCAL" == "$LASTCOMMON" ]
+then
+  echo Nothing to do!!!
+  exit 1
+fi
+
+#install required packages
+for P in pv mbuffer nmap grep
+do
+  printf "testing command: "
+  which $P 2> /dev/null
+  if [ $? -ne 0 ]
+  then
+    printf "Installing $P...\n"
+    sudo apt install --yes $P
+  fi
+done
+
+#prepare remote mbuffer for reception
+echo executing remote receive mbuffer...
+echo ssh -i "${2}" "${3}" "mbuffer -q -s $BLKSIZE -m $BUFSIZE -I ${5} \| zfs receive -F ${4}"  &
+     ssh -i "${2}" "${3}" "mbuffer -q -s $BLKSIZE -m $BUFSIZE -I ${5} | zfs receive -F ${4}"  &
+
+sleep 2
+
+#test remote port ready (netcat problem. it fully opens TCP connection, causing remote mbuffer to finish prematurely
+#nc -z -v -w5 ${3} ${5}
+
+#nmap -n -sS -P0 -p ${5} ${3} | grep -q open
+
+if [ $? -eq 0 ]
+then
+  #send via mbuffer
+  echo executing local send mbuffer...
+  echo zfs send -I "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| mbuffer -q -s $BLKSIZE -m $BUFSIZE -O ${3}:${5}
+       zfs send -I "${LASTCOMMON}" "${LASTLOCAL}"  | pv  | mbuffer -q -s $BLKSIZE -m $BUFSIZE -O ${3}:${5}
+else
+  echo Error: ${3}:${5} not ready!
+  exit 1
+fi
+

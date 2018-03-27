@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUsage:\n\t$0 ip...\n\n"
+  exit 1
+fi
+
+for ARG in $*
+do
+  ssh-keyscan ${ARG} 2> /dev/null &
+done

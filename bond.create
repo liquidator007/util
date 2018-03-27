@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# bond.create
+
+if [ $# -lt 2 ]
+then
+  printf "\n\nUsage:\n\t$0 bond-dev ip-addr/mask slave-dev...\n\n"
+  exit 1
+fi
+
+if [ $(whoami) != "root" ]
+then
+  printf "\n\nnot enough privileges!\n\n"
+  exit 1
+fi
+
+BOND=$1
+IP=$2
+DELAY=1
+
+shift; shift
+
+modprobe bonding
+ip link add bond0 type bond
+ip addr add $IP dev $BOND
+
+sleep $DELAY
+for IF in $*
+do
+  sleep $DELAY
+  ip link set $IF master $BOND
+done
+
+ip link set dev $BOND up

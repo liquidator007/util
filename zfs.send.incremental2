@@ -9,9 +9,9 @@ then
   exit 1
 fi
 
-sudo zfs list -t snapshot -r "${1}" -H -o name -s creation | cut -f 2 -d'@' | sort > /tmp/snap_local
+sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | cut -f 2 -d'@' | sort > /tmp/snap_local
 R1=$?
-ssh -i $2 $3 "zfs list -t snapshot -r ${4} -H -o name -s creation | cut -f 2 -d'@' | sort" > /tmp/snap_remote
+ssh -i $2 $3 "zfs list -t snapshot -d 1 ${4} -H -o name -s creation | cut -f 2 -d'@' | sort" > /tmp/snap_remote
 R2=$?
 
 if [ $R1 -ne 0 ]
@@ -26,7 +26,7 @@ then
 fi
 
 LASTCOMMON=${1}@$(comm -1 -2 /tmp/snap_local /tmp/snap_remote |  awk -F'[ -]' '{print $4$5$6$7,$0}' | sort | tail -1 | cut -f2 -d' ')
-LASTLOCAL=$(sudo zfs list -t snapshot -r "${1}" -H -o name -s creation | tail -1 )
+LASTLOCAL=$(sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | tail -1 )
 
 if [ -z "$LASTCOMMON" ]
 then
@@ -43,6 +43,6 @@ then
   exit 1
 fi
 
-echo zfs send -i "${LASTCOMMON}" "${LASTLOCAL}" \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
+echo zfs send -I  "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
  
-zfs send -i "${LASTCOMMON}" "${LASTLOCAL}" | ssh -i "${2}" "${3}" zfs recv -F "${4}"
+zfs send -I "${LASTCOMMON}" "${LASTLOCAL}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"

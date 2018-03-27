@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#zfs.send.incremental.mbuffer
+#sends the last snapshot of the selected dataset to other machine/dataset, detecting the last, common dataset previously synchronized, in order to optimize incremental transmission
+
+BLKSIZE=128k
+BUFSIZE=1G
+
+if [ $# -lt 5 -o $# -gt 6 ]
+then
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset port [-R]\n\n\n"
+  exit 1
+fi
+
+#install required packages
+for P in pv mbuffer
+do
+  printf "testing command: "
+  which $P 2> /dev/null
+  if [ $? -ne 0 ]
+  then
+    printf "Installing $P...\n"
+    sudo apt install --yes $P
+  fi
+done
+
+#prepare remote mbuffer for reception
+echo executing remote receive mbuffer...
+echo ssh -i "${2}" "${3}" "mbuffer -q -s $BLKSIZE -m $BUFSIZE -I ${5} \| zfs receive -F ${4}"  &
+     ssh -i "${2}" "${3}" "mbuffer -q -s $BLKSIZE -m $BUFSIZE -I ${5} | zfs receive -F ${4}"  &
+
+sleep 1
+#send via mbuffer
+echo executing local send mbuffer...
+echo zfs send ${6} "${1}" \| pv \| mbuffer -q -s $BLKSIZE -m $BUFSIZE -O ${3}:${5}
+     zfs send ${6} "${1}" | pv | mbuffer -q -s $BLKSIZE -m $BUFSIZE -O ${3}:${5}

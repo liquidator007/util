@@ -1,0 +1,26 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUsage:\n\t$interface..."
+  exit 1
+fi
+
+re4="inet[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)"
+re6="inet6[[:space:]]+([0-9a-f:]+)"
+
+get.ip()
+{
+  ip addr show dev $1 | while read -r L; do
+  if [[ $L =~ $2 ]]; then
+    echo ${BASH_REMATCH[1]}
+  fi
+done
+}
+
+
+for I in $*
+do
+  get.ip $I $re4
+  get.ip $I $re6
+done

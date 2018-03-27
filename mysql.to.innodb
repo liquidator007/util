@@ -1,17 +1,12 @@
 #!/bin/bash
 
-if [ $# -lt 2 -o $# -gt 3 ]
+if [ $# -lt 1 -o $# -gt 2 ]
 then
-  printf "\n\nError:\n\t$0 username database [ host ]\n\nPurpose: convert existing mysql database to InnoDB engine\n\n"
+  printf "\n\nError:\n\t$0 database [ host ]\n\nPurpose: convert existing mysql database to InnoDB engine\n\n"
   exit 1
 fi
 
-printf 'Password:'
-read -s PASS
-echo
+DATABASE=$1
+HOST=${2:-localhost}
 
-HOST=${3:-localhost}
-USER=$1
-DATABASE=$2
-
-echo 'SHOW TABLES;'  | mysql -u $USER --password=$PASS -D $DATABASE  | awk '!/^Tables_in_/ {print "ALTER TABLE `"$0"` ENGINE = InnoDB;"}'  | column -t | mysql -u $USER --password=$PASS -D $DATABASE
+echo 'SHOW TABLES;'  | HOME=/root mysql --login-path=local -D $DATABASE  | awk '!/^Tables_in_/ {print "ALTER TABLE `"$0"` ENGINE = InnoDB;"}'  | column -t | HOME=/root mysql --login-path=local -D $DATABASE

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [ $# -ne 5 ]
+then
+  printf "\n\tUso: $0 subred host_ini host_fin fichero_origen fichero_dest\n\n"
+  printf "Ejemplo: $0 172.20.221. 1 20 /tmp/hola /tmp\n\n"
+  exit 1
+fi
+
+INI=$2
+FIN=$3
+SUBRED=$1
+FO=$4
+FD=$5
+
+for HOST in `serie $INI $FIN 1`
+do
+  IP=$SUBRED$HOST
+  echo Conectando a $IP
+  echo EJECUTANDO: rsync -av -u -e 'ssh -i /home/mim/.ssh/mim' $IP:$FO $FD
+  rsync -av -u -e 'ssh -i /home/mim/.ssh/mim' $IP:$FO $FD	&
+done

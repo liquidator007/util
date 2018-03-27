@@ -6,6 +6,12 @@ then
   exit 1
 fi
 
+if [ `whoami` != "root" ]
+then
+  printf "root privileges needed!!!\n"
+  exit 1
+fi
+
 BASE=/certs/signed
 BASECSR=/certs/requests
 BASECA=/certs/ca
@@ -27,25 +33,24 @@ then
      exit 1
 fi
 
-if [ -f $BASE/private/$C.pem ] 
+if [ -f $BASE/private/$C.pem ]
 then
      printf "\n\nYa existe $BASE/private/$C.pem. Rehusando crear nuevo certificado.\n\n"
      exit 1
 fi
 
-if [ -f $BASE/public/$C.pem ] 
+if [ -f $BASE/public/$C.pem ]
 then
      printf "\n\nYa existe $BASE/public/$C.pem. Rehusando crear nuevo certificado.\n\n"
      exit 1
 fi
 
 
-ejecutar()
+execute()
 {
   printf "Ejecutando: $1...\n\n"
   sh -c "$1"
 }
-
 
 CNF_CMD="-config $BASECSR/$C/conf/openssl.cnf"
 CSR=$BASECSR/$C/public/$C.csr
@@ -63,19 +68,23 @@ mkdir -p $BASE/{public,private} >/dev/null 2>&1
 cd $BASECSR
 
 echo eliminando passphrase...
-ejecutar "openssl rsa -in $KEY -out $KEY"
+execute "openssl rsa -in $KEY -out $KEY"
 
 cp $KEY $KEYCOPY
 
 #echo creando certificado...
-#ejecutar "openssl x509 -in $CSR -out $CERT -req $CA_CMD -days $DIAS"
+#execute "openssl x509 -in $CSR -out $CERT -req $CA_CMD -days $DIAS"
 #echo clave privada en $KEYCOPY
 #echo certificado y clave publica en $CERT
 
 cd $BASECA/$CA
 
 echo Firmando y generando $CERT...
-ejecutar "openssl ca -batch $CNF_CMD -in $CSR -out $CERT  -keyfile $CAKEY -cert $CACERT"
+execute "openssl ca -batch $CNF_CMD -in $CSR -out $CERT  -keyfile $CAKEY -cert $CACERT"
+
+chmod 0700 ${BASE}
+chmod 0700 ${BASE}/private
 
 echo Convirtiendo a PKCS#12...
-ejecutar "openssl pkcs12 -export -in $CERT -inkey $KEY -out $P12 -name $P12"
+execute "openssl pkcs12 -export -in $CERT -inkey $KEY -out $P12 -name $P12"
+

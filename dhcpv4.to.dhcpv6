@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ $# -ne 2 ]
+then
+  printf "\n\nUsage:\n\t$0 src dest\n\n"
+  exit 1
+fi
+
+PREFIX64=2001:470:50ab
+
+cat "${1}" | sed \
+ -e "s/172\.20\.254\./${PREFIX64}::/g" \
+ -e "s/172\.16\.6\./${PREFIX64}:ac06::/g" \
+ -e "s/172\.16\.11\./${PREFIX64}:ac11::/g" \
+ -e "s/172\.16\.14\./${PREFIX64}:ac14::/g" \
+ -e "s/172\.16\.15\./${PREFIX64}:ac15::/g" \
+ -e "s/172\.16\.16\./${PREFIX64}:ac16::/g" \
+ -e "s/hardware ethernet/host-identifier option dhcp6.client-id/g" \
+ -e "s/fixed-address/fixed-address6/g" > "${2}"

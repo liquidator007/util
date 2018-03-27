@@ -1,0 +1,5 @@
+#!/bin/bash
+
+#-I: no saltar ficheros que coincidan en tamaño y tiempo
+
+rsync -vrpoglHDt --exclude=/proc --progress $*

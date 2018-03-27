@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# bond.show
+
+if [ $# -lt 1 ]
+then
+  printf "\n\nUsage:\n\t$0 bond-dev...\n\n"
+  exit 1
+fi
+
+for BOND in $*
+do
+  ip link show $BOND
+  ip link show | grep "master $BOND"
+done

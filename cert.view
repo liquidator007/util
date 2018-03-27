@@ -1,4 +1,5 @@
 for C in $*
 do
-  openssl rsa -in $C -noout -text
+  #openssl rsa -in $C -noout -text
+  openssl x509 -in $C -text -noout
 done

@@ -1,18 +1,26 @@
 #!/bin/bash
 
-URL="http://urlblacklist.com/cgi-bin/commercialdownload.pl?type=download&file=bigblacklist"
-DANS_CFG_DIR="/etc/dansguardian"
+#URL="http://urlblacklist.com/cgi-bin/commercialdownload.pl?type=download&file=bigblacklist"
+
+
+URL="https://web.archive.org/web/20170614012822/http://urlblacklist.com/cgi-bin/commercialdownload.pl?type=download&file=bigblacklist"
+
+DANS_CFG_DIR="/etc/e2guardian"
+DANS_USER=e2guardian
 DANS_BLACKLIST_DIR=$DANS_CFG_DIR/blacklists
 DANS_BL_UPDATE_DIR=$DANS_CFG_DIR/bl.update
+TESTFILE=NOMEBORRES.NONONO
 OLDNAME="commercialdownload.pl*"
 NEWNAME="bigblacklist.tgz"
 TMPDIR=/tmp
 
 cd $TMPDIR
 rm -f $OLDNAME
-wget "$URL"
+wget -c "$URL"
 
-if [ -f "$OLDNAME" ]
+ls $OLDNAME  > /dev/null 2>&1
+
+if [ $? -eq 0 ]
 then
   sudo mkdir -p $DANS_CFG_DIR 2>/dev/null
   echo renaming downloaded file $OLDNAME to $NEWNAME ...
@@ -23,6 +31,9 @@ then
   sudo rm -rf $DANS_BL_UPDATE_DIR
   echo extracting new blacklists to $DANS_CFG_DIR ...
   sudo tar --directory $DANS_CFG_DIR -zxvf $NEWNAME
+  chown -R e2guardian. $DANS_BLACKLIST_DIR
+  touch $DANS_BLACKLIST_DIR/$TESTFILE
+  /util/updbl 1     #mas que nada para crear las listas desordenadas
   echo computing new blacklists \' space usage ...
   du -hs $DANS_BLACKLIST_DIR
   echo fin

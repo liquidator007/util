@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#Parametros
+PLANTILLA=/etc/dhcp/dhcpd6.conf.plantilla
+CONF1=/etc/dhcp/dhcpd6.conf.linuxproxy1
+CONF2=/etc/dhcp/dhcpd6.conf.linuxproxy2
+CONF2S2=/etc/dhcp/dhcpd6.conf.linuxproxy2
+RUTA2=/etc/dhcp
+
+DHCP1=2001:470:b53a::100
+DHCP2=2001:470:b53a::235
+DHCP41=172.20.254.100
+DHCP42=172.20.254.235
+
+#hacemos copia previa antes de editar
+cp $PLANTILLA /tmp
+
+#editamos
+vim $PLANTILLA
+
+if [ $? -ne 0 ]
+then
+  exit 1
+fi
+
+FILENAME=`basename $PLANTILLA`
+
+echo Creating dhcp configurations...
+sed "s/PRIMARIO4/$DHCP41/g" $PLANTILLA | sed "s/SECUNDARIO4/$DHCP42/g" | sed "s/PRIMARIO/$DHCP1/g" | sed "s/SECUNDARIO/$DHCP2/g"   > $CONF1
+
+diff $PLANTILLA /tmp/$FILENAME > /dev/null 2>&1
+CHANGES=$?
+
+printf "SKIPPING: testing configuration in $CONF1..."
+#dhcpd -6 -t -cf $CONF1  > /dev/null 2>&1
+#CONFIG_OK=$?
+CONFIG_OK=0
+
+if [ $CHANGES -eq 0 ]
+then
+  echo NO CHANGES WERE MADE, exiting
+  exit
+fi 
+
+if [ $CONFIG_OK -eq 0 ]
+then
+  echo OK!
+  echo; echo
+  sed "s/SECUNDARIO4/$DHCP41/g" $PLANTILLA | sed "s/PRIMARIO4/$DHCP42/g" | sed "s/SECUNDARIO/$DHCP1/g" | sed "s/PRIMARIO/$DHCP2/g"   > $CONF2
+
+  echo Subiendo ficheros a $DHCP2...
+  scp -6 -i /home/mim/.ssh/mim $CONF1 \[$DHCP2\]:$RUTA2
+  scp -6 -i /home/mim/.ssh/mim $CONF2 \[$DHCP2\]:$RUTA2
+  ssh -6 -i /home/mim/.ssh/mim root@$DHCP2 "rm $RUTA2/dhcpd6.conf; ln -s $CONF2S2 $RUTA2/dhcpd6.conf"
+
+  echo Restarting dhcp on $DHCP2...
+  ssh -i /home/mim/.ssh/mim root@$DHCP2 "systemctl restart isc-dhcp-server6"
+
+  echo Restarting dhcp on $DHCP1...
+  ssh -i /home/mim/.ssh/mim root@$DHCP1 "systemctl restart isc-dhcp-server6"
+
+  echo
+  ps ax | grep dhcpd | grep -v grep
+else
+  echo "ERROR! (Don't worry, old configuration is still running)"
+  echo; echo
+  echo SKIPPING: Testing what seems to be the problem...
+  #dhcpd -t -cf $CONF1 
+fi

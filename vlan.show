@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# vlan.show
+
+if [ $# -lt 1 ]
+then
+  printf "\n\nUsage:\n\t$0 dev...\n\n"
+  exit 1
+fi
+
+for DEV in $*
+do
+  ip link show | grep "$DEV"
+done

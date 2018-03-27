@@ -12,4 +12,4 @@ N=$3
 let "N++"
 
 echo zfs list -t snapshot -H -o name -S creation -d 1 "${1}" \| egrep "${2}" \| tail -n +$N \| xargs --no-run-if-empty -n 1 zfs destroy "${4}"
-zfs list -t snapshot -H -o name -S creation -d 1 "${1}" | egrep "${2}" | tail -n +$N | xargs --no-run-if-empty -n 1 zfs destroy ${4}
+zfs list -t snapshot -H -o name -S creation -d 1  "${1}" | egrep "${2}" | tail -n +$N | xargs --no-run-if-empty -n 1 zfs destroy ${4}

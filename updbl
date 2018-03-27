@@ -1,9 +1,15 @@
 #!/bin/bash
 
 #parametrizacion
-RUTA_DIFFS=/etc/dansguardian/bl.update
-RUTA_BLACK=/etc/dansguardian/blacklists
+RUTA_DIFFS=/etc/e2guardian/bl.update
+RUTA_BLACK=/etc/e2guardian/blacklists
 TEST_FILE=NOMEBORRES.NONONO
+DANS_USER=e2guardian
+
+#SITE=urlblacklist.com
+#SITE=78.31.107.133
+SITE=https://web.archive.org/web/20170625022349/http://www.urlblacklist.com:80
+
 RETROCEDER_DIAS=7
 WAIT=5
 
@@ -20,7 +26,7 @@ aplicar_diff()
 
    cd $RUTA_DIFFS
 
-   URL=http://urlblacklist.com/diffs/$1.gz
+   URL=http://$SITE/diffs/$1.gz
    printf "$1: descargando, "
 
    if [ ! -f $RUTA_DIFFS/$1.gz ]
@@ -32,7 +38,7 @@ aplicar_diff()
        echo "no se ha podido descargar"
        #si no es posible descargar un fichero hay que abortar la ejecución,
        #no tiene sentido aplicar parches posteriores
-       exit 2
+       return 2
      fi
    fi
    
@@ -96,17 +102,20 @@ then
 fi
 
 let N=0
+RET=0
 
-while [ $RETROCEDER_DIAS -ge 0 ]
+while [ $RETROCEDER_DIAS -ge 0 -a $RET -ne 2 ]
 do
   FECHA=`date --date="$RETROCEDER_DIAS days ago" +%Y%m%d`
   FICHERO=changes-$FECHA.diff
   aplicar_diff $FICHERO
-  if [ $? -eq 0 ]
+  RET=$?
+  if [ $RET -eq 0 ]
   then
     let N=$N\+1
   fi 
   let RETROCEDER_DIAS=$RETROCEDER_DIAS\-1
+  echo ENE $N
 done
 
 echo "Se han aplicado $N parches"
@@ -114,24 +123,24 @@ echo "Se han aplicado $N parches"
 if [ $N -ge 0 ]
 then
   printf "desordenando listas para carga rapida..."
-  find $RUTA_BLACK -name '*[^.][^u]' -type f -exec rl '{}' -o '{}'.u \;
+  find $RUTA_BLACK -name '*[^.][^u]' -type f -exec rl '{}' -o '{}'.u \; -exec chown $DANS_USER. '{}'.u  \;
   echo "ok"
 
   #Ojo, el reload no siempre funciona. Mejor restart.
-  printf "recargando dansguardian..." 
+  printf "recargando e2guardian..." 
 
-  /etc/init.d/dansguardian stop
+  systemctl stop e2guardian
 
   #Rematar...
   RET=0
   while [ "$RET" -eq 0 ]
   do
-  killall dansguardian
+  killall e2guardian
   RET=$?
   done
 
   sleep 1
-  /etc/init.d/dansguardian start
+  systemctl start e2guardian
 
   echo "ok"
 

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-if [ $# -ne 4 ]
+if [ $# -lt 4 -o $# -gt 5 ]
 then
-  printf "\n\nUsage:\n\t$0 src-snapshot ssh.privkey dest-host dest-dataset\n\n\n"
+  printf "\n\nUsage:\n\t$0 src-snapshot ssh.privkey dest-host dest-dataset [-R]\n\n\n"
   exit 1
 fi
 
-echo zfs send "${1}" \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
-zfs send "${1}" | ssh -i "${2}" "${3}" zfs recv -F "${4}"
+echo zfs send ${5} "${1}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
+zfs send ${5} "${1}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"

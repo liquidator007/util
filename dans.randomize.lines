@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#parametrizacion
+RUTA_DIFFS=/etc/dansguardian/bl.update
+RUTA_BLACK=/etc/dansguardian/blacklists
+TEST_FILE=NOMEBORRES.NONONO
+RETROCEDER_DIAS=7
+WAIT=5
+
+  printf "desordenando listas para carga rapida..."
+  find $RUTA_BLACK -name '*[^.][^u]' -type f -exec rl '{}' -o '{}'.u \;
+  echo "ok"
+
+  #Ojo, el reload no siempre funciona. Mejor restart.
+  printf "recargando dansguardian..." 
+
+  /etc/init.d/dansguardian stop
+
+  #Rematar...
+  RET=0
+  while [ "$RET" -eq 0 ]
+  do
+  killall dansguardian
+  RET=$?
+  done
+
+  sleep 1
+  /etc/init.d/dansguardian start
+
+  echo "ok"
+
+  #suprimida esta parte para poder reiniciar el servicio manualmente
+  #printf "eliminando listas desordenadas tras la carga..."
+  #find $RUTA_BLACK -name '*.u' -type f -exec rm {} \;
+  #echo "ok"
+
+printf "borrando ficheros residuales..."
+find $RUTA_BLACK -type f -name '*.processed' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.processed.u' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.rej' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.rej.u' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.orig' -exec rm {} \;
+find $RUTA_BLACK -type f -name '*.orig.u' -exec rm {} \;
+echo "ok"

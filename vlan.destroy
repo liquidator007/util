@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# vlan.destroy
+
+if [ $# -lt 1 ]
+then
+  printf "\n\nUsage:\n\t$0 dev vlan-id...\n\n"
+  exit 1
+fi
+
+if [ $(whoami) != "root" ]
+then
+  printf "\n\nnot enough privileges!\n\n"
+  exit 1
+fi
+
+DEV=$1
+
+shift
+
+for ID in $*
+do
+  ip link delete $DEV.$ID
+done

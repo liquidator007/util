@@ -6,6 +6,12 @@ then
   exit 1
 fi
 
+if [ `whoami` != "root" ]
+then
+  printf "root privileges needed!!!\n"
+  exit 1
+fi
+
 BASE=/certs/requests
 EDITOR=nano
 
@@ -17,7 +23,7 @@ then
      exit 1
 fi
 
-ejecutar()
+execute()
 {
   printf "Ejecutando: $1...\n\n"
   sh -c "$1"
@@ -28,7 +34,7 @@ chmod 400 $BASE/$C/private
 
 cd $BASE/$C
 
-cp -uR $BASE/plantilla/conf/ .
+cp -uR $BASE/template/conf/ .
 
 echo Edite la configuracion por defecto de $C...
 sleep 3
@@ -39,4 +45,5 @@ CSR=./public/$C.csr
 CNF=./conf/openssl.cnf
 CNF_CMD="-config $CNF"
 
-ejecutar "openssl req -new -keyout $KEY -out $CSR $CNF_CMD"
+execute "openssl req -new -keyout $KEY -out $CSR $CNF_CMD"
+

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# bond.destroy
+
+if [ $# -lt 1 ]
+then
+  printf "\n\nUsage:\n\t$0 bond-dev...\n\n"
+  exit 1
+fi
+
+if [ $(whoami) != "root" ]
+then
+  printf "\n\nnot enough privileges!\n\n"
+  exit 1
+fi
+
+for BOND in $*
+do
+  ip link delete $BOND
+done

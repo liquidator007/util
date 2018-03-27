@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# vlan.create
+
+if [ $# -lt 2 ]
+then
+  printf "\n\nUsage:\n\t$0 dev vlan-id...\n\n"
+  exit 1
+fi
+
+if [ $(whoami) != "root" ]
+then
+  printf "\n\nnot enough privileges!\n\n"
+  exit 1
+fi
+
+DEV=$1
+
+shift
+
+for ID in $*
+do
+  if [ $ID -ge 1 -a $ID -le 4094 ]
+  then
+    ip link add link $DEV name $DEV.$ID type vlan id $ID
+    ip link set dev $DEV.$ID up
+  else
+    echo VLAN $ID out of bounds
+  fi
+done

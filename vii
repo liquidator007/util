@@ -1,0 +1,38 @@
+#!/bin/bash
+
+#This script calls vi editor for every file and, if modified, saves a hidden backup file named PREFIX+filename+TIMESPAMP+logname, in the same path than the original file
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUsage:\n\t$0 file...\n\n"
+  exit 1
+fi
+
+TIMESTAMP=`date +%Y-%m-%d-%H-%M-%S`
+PREFIX="."
+
+
+for F in $*
+do
+  #file exists and is a regular one, but not writeable
+  if [ -f "${F}" -a ! -w "${F}" ]
+  then
+    printf "\n\n$0: operation rejected gracefully, file $F exists but not enough permissions to write on it!\n\n"
+    exit 1
+  fi
+  FPATH=$(/usr/bin/dirname "${F}")
+  FNAME=$(/usr/bin/basename "${F}")
+  cp "${F}" "${FPATH}/${PREFIX}${FNAME}.${TIMESTAMP}.$(logname)"
+  vi "${F}"
+  diff "${FPATH}/${PREFIX}${FNAME}.${TIMESTAMP}.$(logname)" "${F}"  > /dev/null 2>&1
+  CHANGES=$?
+  if [ $CHANGES -eq 0 ]
+  then
+    echo $F: NO CHANGES WERE MADE!!!
+    sleep 1
+    rm -f "${FPATH}/${PREFIX}${FNAME}.${TIMESTAMP}.$(logname)"
+  else
+    echo $F: change list: '<=old, >=new'
+    diff "${FPATH}/${PREFIX}${FNAME}.${TIMESTAMP}.$(logname)" "${F}" 
+  fi
+done

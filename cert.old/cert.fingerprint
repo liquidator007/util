@@ -1,0 +1,4 @@
+for C in $*
+do
+  openssl x509 -noout -fingerprint -in $C
+done

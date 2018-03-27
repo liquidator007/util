@@ -1,0 +1,42 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\tUso: $0 host...\n\n"
+  printf "Ejemplo: $0 c14x30.iescierva.net\n\n"
+  exit 1
+fi
+
+PUPPETSERVER=genesis.iescierva.net
+PATH=/util:$PATH
+CERT=/home/mim/.ssh/mim
+USER=root
+OPTS="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+PING_WAIT=3
+
+for MY_HOST in $*
+do
+  #ping test
+  MY_IP=`dig +short $MY_HOST`
+  echo Testing $MY_HOST at $MY_IP for $PING_WAIT seconds...
+#  ping -i 0.1 -c 5 -w $PING_WAIT $MY_HOST
+#  if [ $? -eq 0 ]
+#  then
+#  echo $MY_HOST is alive!
+  #limpiar en el servidor puppet el certificado antiguo
+  ssh $OPTS -i $CERT root@$PUPPETSERVER "puppet cert clean $MY_HOST; sleep 1"
+
+  #borrar en el cliente puppet los certificados viejos y generar nueva solicitud
+  ssh $OPTS -i $CERT root@$MY_HOST "hostname `dig +short -x $MY_IP | cut -f1 -d'.' ` ; ( hostname > /etc/hostname ); rm -rf /var/lib/puppet/ssl; puppet agent --enable; puppet agent -t; sleep 1"
+
+  #firmar en el servidor puppet el certificado nuevo
+  ssh $OPTS -i $CERT root@$PUPPETSERVER "hostname; puppet cert sign $MY_HOST; sleep 1"
+
+  #reiniciar el agente
+  ssh $OPTS -i $CERT root@$MY_HOST "hostname; service puppet restart"
+#  else
+#    echo "Error: $MY_HOST no responde, debe estar activo"
+#    exit 1
+#  fi
+done
+

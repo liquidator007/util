@@ -1,0 +1,50 @@
+#!/bin/bash
+
+if [ $# -gt 2 ]
+then
+  printf "Usage:\n\t$0 [path-to-.mylogin.cnf] [path-to-backup-volumes]\n\n"
+  exit 1
+fi
+
+P=${1:-/root}
+BACKUPDIR=${1:-/backups}
+
+echo "Pruning all bacula clients on catalog (connecting via credentials in $P/.mylogin.cnf)..."
+
+clients=$(HOME="$P" mysql --login-path=local -e'select Name from Client ORDER BY Name ASC;' bacula | tail -n+2)
+if [ $? -ne 0 ]
+then
+  echo "Can't connect to bacula catalog...exiting"
+  exit 1
+fi
+
+for client in $(echo $clients)
+do
+  printf "$client "
+  echo "prune files client=${client} yes" | bconsole > /dev/null
+done
+echo
+
+N=$(echo "list volumes" | bconsole | grep "Purged" | awk {'print $4'} | wc -l)
+echo "Number of volumes to be purged: $N"
+
+if [ $N -ne 0 ]
+then
+  echo Deleting volumes...
+  for f in $(echo "list volume" | bconsole | grep Purged | cut -d ' ' -f6); do
+    printf "$f "
+    echo "delete volume=$f yes" | bconsole 2>/dev/null
+    rm -rf /mnt/bacula/default/$f;
+  done
+  echo
+fi
+
+echo "Deleting orphan volumes in $BACKUPDIR (not in catalog)..."
+cd $BACKUPDIR
+for i in $(find . -maxdepth 1 -type f -printf "%f\n"); do
+  echo "list volume=$i" | bconsole | if grep --quiet "No results to list"; then
+        printf "$i "
+        rm -f "$BACKUPDIR/$i"
+  fi
+done
+echo

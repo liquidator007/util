@@ -1,0 +1,73 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]
+then
+  printf "\n\tUso: $0 host...\n\n"
+  printf "Ejemplo: $0 c14x30.iescierva.net\n"
+  printf "\n\t\t or\n"
+  printf "\n\tUso: $0 aula...\n\n"
+  printf "Ejemplo: $0 c15\n\n"
+  exit 1
+fi
+
+PUPPETSERVER=genesis.iescierva.net
+PATH=/util:$PATH
+CERT=/home/mim/.ssh/mim
+USER=root
+OPTS="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+PING_WAIT=3
+
+case $1 in
+	C11|c11)
+		echo Se va a firmar el aula $1 completa y/n?
+		read $confirm
+		if [ "$confirm" != "y" ]
+		then
+			for n in {1..30}
+			do
+				HOSTS="$HOSTS $1x$n"
+			done
+		/util/jc_puppet.sign $HOSTS
+		fi
+		exit 0;;
+	C14|c14)
+		octeto3=14;;
+	C15|c15)
+		octeto3=15;;
+	C16|c16)
+		octeto3=16;;
+	C06|c06)
+		octeto3=6;;
+	B23|b23)
+		octeto3=123;;
+	A23|a23)
+		octeto3=73;;
+	*)
+		;;
+esac
+for MY_HOST in $*
+do
+  #ping test
+  MY_IP=`dig +short $MY_HOST`
+  echo Testing $MY_HOST at $MY_IP for $PING_WAIT seconds...
+#  ping -i 0.1 -c 5 -w $PING_WAIT $MY_HOST
+#  if [ $? -eq 0 ]
+#  then
+#  echo $MY_HOST is alive!
+  #limpiar en el servidor puppet el certificado antiguo
+  ssh $OPTS -i $CERT root@$PUPPETSERVER "puppet cert clean $MY_HOST; sleep 1"
+
+  #borrar en el cliente puppet los certificados viejos y generar nueva solicitud
+  ssh $OPTS -i $CERT root@$MY_HOST "hostname `dig +short -x $MY_IP | cut -f1 -d'.' ` ; ( hostname > /etc/hostname ); rm -rf /var/lib/puppet/ssl; puppet agent --enable; puppet agent -t; sleep 1"
+
+  #firmar en el servidor puppet el certificado nuevo
+  ssh $OPTS -i $CERT root@$PUPPETSERVER "hostname; puppet cert sign $MY_HOST; sleep 1"
+
+  #reiniciar el agente
+  ssh $OPTS -i $CERT root@$MY_HOST "hostname; service puppet restart"
+#  else
+#    echo "Error: $MY_HOST no responde, debe estar activo"
+#    exit 1
+#  fi
+done
+

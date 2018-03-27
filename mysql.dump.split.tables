@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+ 
+AWK=awk
+REGEX_NAME="Current Database: \`(.*)\`"
+ 
+# Checks argument and prints usage if needed
+if [ "$#" -lt "1" ]
+then
+    echo "Usage: $0 <dump.sql>"
+    exit 1
+fi
+
+cat "$1" | $AWK 'BEGIN {output = "comments"; } $data ~ /^CREATE TABLE/ {close(output);output = substr($3,2,length($3)-2); } { print $data >> output }';

@@ -1,0 +1,8 @@
+echo Hardware ---------
+lshw
+echo Disks ------------
+lsblk
+echo PCI --------------
+lspci
+echo USB --------------
+lsusb

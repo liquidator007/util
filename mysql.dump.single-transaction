@@ -1,0 +1,20 @@
+#!/bin/bash
+
+if [ $# -eq 0 -o ! -d "$1" ]
+then
+  printf "\n\nUsage:\n\t$0 destdinationdir [database]...\n\n"
+  exit 1
+fi
+
+DST="$1"
+shift
+
+if [ $# -eq 0 ]
+then
+    HOME=/root mysqldump --login-path=local --single-transaction --all-databases -u root -p > ${DST}/all-databases.mysqldump.sql
+else
+  for D in $*
+  do
+    HOME=/root mysqldump --login-path=local --single-transaction -u root -p "${D}" > ${DST}/${D}.mysqldump.sql
+  done
+fi

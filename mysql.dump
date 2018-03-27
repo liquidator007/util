@@ -1,0 +1,30 @@
+#!/bin/bash
+
+BACKUPLOCATION=/media/databases/backup
+
+mkdir -p $BACKUPLOCATION
+
+# back up all the mysql databases, into individual files so we can later restore
+# them separately if needed.
+
+echo mysqldump
+
+HOME=/root mysql --login-path=local -B -N -e "show databases" | while read db
+do
+   EXCLUDED=0
+   for EXCLUSION in "$@"
+   do
+     if [ "$EXCLUSION" == "$db" -a $EXCLUDED -eq 0 ]
+     then
+       EXCLUDED=1
+     fi
+   done
+   if [ $EXCLUDED -eq 0 ]
+   then 
+     BACKUPFILE=$BACKUPLOCATION/$db.mysql.bz2
+     echo "Backing up $db into $BACKUPFILE"
+     HOME=/root /usr/bin/mysqldump --login-path=local $db | bzip2 > $BACKUPFILE
+   else
+     echo "Excluding $db"
+   fi
+done

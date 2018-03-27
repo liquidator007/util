@@ -2,10 +2,10 @@
 
 # Usage: temp_throttle.sh max_temp
 # USE CELSIUS TEMPERATURES.
-# version 2.11
+# version 2.20
 
 cat << EOF
-Author: Sepero 2013 (sepero 111 @ gmx . com)
+Author: Sepero 2016 (sepero 111 @ gmx . com)
 URL: http://github.com/Sepero/temp-throttle/
 
 EOF
@@ -104,7 +104,12 @@ set_freq () {
 	FREQ_TO_SET=$(echo $FREQ_LIST | cut -d " " -f $CURRENT_FREQ)
 	echo $FREQ_TO_SET
 	for i in $(seq 0 $CORES); do
-		echo $FREQ_TO_SET > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_max_freq
+		# Try to set core frequency by writing to /sys/devices.
+		{ echo $FREQ_TO_SET 2> /dev/null > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_max_freq; } ||
+		# Else, try to set core frequency using command cpufreq-set.
+		{ cpufreq-set -c $i --max $FREQ_TO_SET > /dev/null; } ||
+		# Else, return error message.
+		{ err_exit "Failed to set frequency CPU core$i. Run script as Root user. Some systems may require to install the package cpufrequtils."; }
 	done
 }
 
@@ -134,14 +139,17 @@ get_temp () {
 
 ### END define script functions.
 
+echo "Initialize to max CPU frequency"
+unthrottle
 
-# Mainloop
+
+# Main loop
 while true; do
-	get_temp # Gets the current tempurature and set it to the variable TEMP.
+	get_temp # Gets the current temperature and set it to the variable TEMP.
 	if   [ $TEMP -gt $MAX_TEMP ]; then # Throttle if too hot.
 		throttle
 	elif [ $TEMP -le $LOW_TEMP ]; then # Unthrottle if cool.
 		unthrottle
 	fi
-	sleep 3 # The amount of time between checking tempuratures.
+	sleep 3 # The amount of time between checking temperatures.
 done

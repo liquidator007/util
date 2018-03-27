@@ -15,7 +15,7 @@ tSleep=10
 #########################################
 
 
-temp=`sensors|grep 'Core 0'|cut -d "+" -f2|cut -d "." -f1`
+temp=`sensors|grep 'Core 0'|cut -d "+" -f2|cut -d "." -f1 | sed '2,$d'`
 
 if [ $temp -ge ${tWarning} ]
 then
