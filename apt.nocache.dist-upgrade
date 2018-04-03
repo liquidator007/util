@@ -1,1 +1,15 @@
+#!/bin/bash
+
+################################################################################
+# apt.nocache.dist-upgrade
+################################################################################
+# performs dist-upgrade ignoring caches
+################################################################################
+
+if [ $# -ne 0 ]
+then
+  printf "\n\nUsage:\n\t$0\n\n"
+  exit 1
+fi
+
 apt-get dist-upgrade -o Acquire::http::No-Cache=True

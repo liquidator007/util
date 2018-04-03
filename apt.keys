@@ -1,6 +1,14 @@
+#!/bin/bash
+
+###############################################################################
+# apt.keys
+###############################################################################
+# get key(s) from SERVER and add it to local apt
+###############################################################################
+
 if [ $# -eq 0 ]
 then
-  echo "Uso: $0 KEY..."
+  printf "\n\nUsage:\n\t$0 key...\n\n"
   exit 1
 fi
 
@@ -9,7 +17,6 @@ SERVER=hkp://pgp.mit.edu
 for KEY in $*
 do
   echo $KEY...
-  gpg --keyserver $SERVER --recv-keys $KEY
-  gpg --export --armor $KEY | sudo apt-key add -
+  gpg --keyserver $SERVER --recv-keys $KEY && ( gpg --export --armor $KEY | sudo apt-key add - )
 done
 

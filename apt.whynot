@@ -1,3 +1,15 @@
 #!/bin/bash
 
+################################################################################
+# apt.whynot
+################################################################################
+# why-not finds a dependency chain leading to a conflict with the target package
+################################################################################
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUsage:\n\t$0 package...\n\n"
+  exit 1
+fi
+
 aptitude why-not $*

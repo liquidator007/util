@@ -1,0 +1,36 @@
+#!/bin/bash
+
+################################################################################
+# user.warning
+################################################################################
+# warns if more than one unique user (i.e. you) logs into your system
+################################################################################
+
+if [ $# -ne 0 ]
+then
+  printf "\n\nUsage:\n\t$0\n\n"
+  exit 1
+fi
+
+alarma()
+{
+  cnt=1;
+  while [ $cnt -le $1 ]
+  do
+    printf "\a"
+    sleep 1
+    cnt=`expr $cnt + 1`
+  done
+}
+
+while true
+do
+WHO=$(who | cut -f1 -d' ' | sort |uniq)
+if [ $(echo $WHO | wc -w) -gt 1 ]
+then
+  echo Warning: logged users: $WHO
+  alarma 3
+  exit 1
+fi
+sleep 1
+done

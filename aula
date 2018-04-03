@@ -1,5 +1,13 @@
 #!/bin/bash
 
+################################################################################
+#aula (classroom)
+################################################################################
+# generates domain names for a series of machines according to prefix / suffix
+# example: ./aula pc 15 .google.com
+# produces: pc01.google.com pc02.google.com ... pc15.google.com
+################################################################################
+
 if [ $# -eq 0 ]
 then
   printf "\n\nUsage:\n\n$0 prefix [ # of PCs [suffix] ]\n\n"

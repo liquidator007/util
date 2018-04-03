@@ -1,13 +1,23 @@
 #!/bin/bash
 
-#apt.clean
-#---------
-#clean all packages and lists from the "apt" package manager. Use this tool ONLY if you are getting strange errors with your repositories
+################################################################################
+# apt.clean
+################################################################################
+# clean all packages and lists from the "apt" package manager.
+# Use this tool ONLY if you are getting strange errors with your
+# repositories!!!
+################################################################################
 
+if [ $# -ne 0 ]
+then
+  printf "\n\nUsage:\n\t$0\n\n"
+  exit 1
+fi
+ 
 sudo apt-get clean
 cd /var/lib/apt
 sudo mv lists /tmp/lists.`date '+%F-%T'`.old
 sudo mkdir -p lists/partial
 sudo apt-get clean
 
-echo you can execute \"apt update\" now if you wish to
+echo you can execute \"apt update\" now at your wish!

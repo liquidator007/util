@@ -1,5 +1,19 @@
 #!/bin/bash
 
+################################################################################
+#apt.unhold
+################################################################################
+# Place the "install" label to a package(s)
+# package(s) will be unheld and can be updated from now on
+# example:  ./apt.unhold virtualbox-5.2
+################################################################################
+
+if [ $# -eq 0 ]
+then
+  printf "\n\nUsage:\n\t$0 package...\n\n"
+  exit 1
+fi
+
 for P in $*
 do
   echo "$P install" | sudo dpkg --set-selections
