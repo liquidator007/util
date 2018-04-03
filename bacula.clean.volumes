@@ -1,5 +1,16 @@
 #!/bin/bash
 
+################################################################################
+# bacula.clean.volumes
+################################################################################
+# Warning!!! use at your own risk!!!
+# When executed on a bacula-sd system, connects to the mysql catalog, then
+# prune, and finally delete all volumes on the path not registered on catalog
+# NOTE: you need to create a ".mylogin.cnf" file using mysql_config_editor
+# MORE INFO: https://dev.mysql.com/doc/mysql-utilities/1.5/en/mysql-utils-intro-connspec-mylogin.cnf.html
+################################################################################
+
+
 if [ $# -gt 2 ]
 then
   printf "Usage:\n\t$0 [path-to-.mylogin.cnf] [path-to-backup-volumes]\n\n"

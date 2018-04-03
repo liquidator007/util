@@ -1,1 +1,0 @@
-cb -l 79 $1 | sed "s/	/  /g"  # sustituye tabulador por 2 espacios

@@ -1,5 +1,12 @@
 #!/bin/bash
 
+################################################################################
+# bacula.lv
+################################################################################
+# Warning!!! use at your own risk!!!
+# creates or deletes temp snapshot (created to be used from bacula backup system)
+################################################################################
+
 if [ $# -eq 0 ]
 then
   printf "\n\nUsage:\n\t$0 { create | delete } [fstype] [vg] [extension] [snapsize] [LVs]\n\n"
