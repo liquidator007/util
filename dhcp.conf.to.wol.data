@@ -1,5 +1,11 @@
 #!/bin/bash
 
+################################################################################
+# dhcp.conf.to.wol.data
+################################################################################
+# create wol.data from dhcpd.conf, used with "wol" command
+################################################################################
+
 if [ $# -ne 0 ]
 then
   printf "\n\nUsage:\n\t$0\n\n"
@@ -11,7 +17,7 @@ WOL=/tmp/wol
 OUTPUT=/util/wol.data
 
 echo reading your $DHCP and extracting network parameters...
-cat $DHCP | /util/dhcpparse.awk | grep -v '^;' > "$WOL"
+cat $DHCP | /util/dhcp.parse.awk | grep -v '^;' > "$WOL"
 
 echo splitting data...
 cut -d';' -f1 "$WOL" > "${WOL}.ip"

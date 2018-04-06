@@ -1,2 +1,0 @@
-#!/bin/sh
-sftp -o Port=1022 dgsird434@docum

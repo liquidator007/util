@@ -1,11 +1,15 @@
 #!/bin/bash
-#
-# delay ms
-# lee de stdin linea a linea copiando a stdout, y esperando entre lineas
+
+################################################################################
+# delay
+################################################################################
+# copy from stdin to stdout sleeping between lines
+# example: ls -l | delay 0.75
+################################################################################
 
 if [ $# -ne 1 ]
 then
-  printf "\n\nUso:\n\t$0 delay-segundos\n\n\n"
+  printf "\n\nUsage:\n\t$0 delay-in-seconds\n\n\n"
   exit 1
 fi
 

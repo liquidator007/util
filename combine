@@ -1,0 +1,31 @@
+#!/bin/bash
+
+################################################################################
+# combine
+################################################################################
+# combine all lines from two files
+# example f1 has lines f11 f12 f13
+#         f2 has lines f21 f22
+# output will be: 
+# f11f21
+# f12f21
+# f13f21
+# f11f22
+# f12f22
+# f13f22
+################################################################################
+
+if [ $# -ne 2 ]
+then
+  printf "\n\nUso:\n\t$0 dicc1 dicc2\n\n"
+  exit 1
+fi
+
+while read b
+do
+  while read a
+  do
+     echo -n ${a}
+     echo ${b}
+  done < $1
+done < $2

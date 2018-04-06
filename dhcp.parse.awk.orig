@@ -1,13 +1,11 @@
 #!/usr/bin/awk -f
-#
-# Author: Matt Pascoe - matt@opennetadmin.com
+# 
+# Author: Matt Pascoe - matt@opennetadmin.com 
 #
 # This awk script is used to extract relavant information from a dhcpd.conf
-# config file and build dcm.pl output with appropriate fields.  This can be
-# used to bootstrap a new database from existing site data.
-# As usual, inspect the output for accuracy.
-# Also you will get three types of output, subnet,pool,host.  You must
-# add the subnet information first, then pool, then host.
+# config file and build a csv with appropriate fields for passing into
+# a dcm.pl module.  This can be used to bootstrap a new database from existing
+# site data.  As usual, inspect the output for accuracy.
 
 # Note that for hosts, it will try a reverse lookup on the IP address
 # to determine an appropriate dns name
@@ -15,10 +13,7 @@
 # USAGE:
 # make this script executable with `chmod +x dhcpparse.awk` and then
 #
-#   cat dhcpd.conf|./dhcpparse.awk|sort
-
-
-
+#   cat dhcpd.conf|./dhcpparse.awk
 
 # set the RECORD SEPARATOR, RS, to "}" ... records span multiple lines
 BEGIN {RS="}"}
@@ -100,7 +95,7 @@ length($0) > 5 { total++
     command | getline tmpname
     close(command)
     split(tmpname,n,"pointer")
-
+    
     # trim off leading spaces etc
     gsub(/^[ \t]+/, "", n[2])
 
@@ -108,30 +103,25 @@ length($0) > 5 { total++
   }
 
   if( length(name[total]) == 0 ) {
-    gsub(/\./, "-", hostname[total])
-    # This option turns the ip into a fake name
-    #name[total]="dhcpload-" ip[total]
-
-    # This option just uses the text found in the conf for host
-    name[total]=hostname[total]
+    name[total]="dhcpload-" ip[total]
   }
-
+  
 
 }
 
 # for every entry we captured, display its appropriate info
 END { for(entry in counter) {
-#         if(type[entry] == "subnet") {
-#             printf("dcm.pl -r %s_add ip=%s netmask=%s name='DHCPLOAD-%s' type='LAN'\n",\
-#                 type[entry],subnetip[entry],subnetmask[entry],subnetip[entry])
-#         }
-#         if(type[entry] == "pool") {
-#             printf("dcm.pl -r dhcp_pool_add start=%s end=%s\n",\
-#                 poolstart[entry],poolend[entry])
-#         }
+         if(type[entry] == "subnet") {
+             printf("%s;%s;%s;DHCPLOAD-%s\n",\
+                 type[entry],subnetip[entry],subnetmask[entry],subnetip[entry])
+         }
+         if(type[entry] == "pool") {
+             printf("%s;%s;%s;%s\n",\
+                 type[entry],poolstart[entry],poolend[entry],failover[entry])
+         }
          if(type[entry] == "host") {
-             printf("%s;%s;%s\n",\
-                 ip[entry],mac[entry],name[entry])
+             printf("%s;%s;%s;%s;%s\n",\
+                 type[entry],ip[entry],mac[entry],name[entry],hostname[entry])
          }
     }
 }

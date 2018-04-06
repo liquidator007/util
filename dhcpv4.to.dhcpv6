@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#UNDER CONSTRUCTION
+
 if [ $# -ne 2 ]
 then
   printf "\n\nUsage:\n\t$0 src dest\n\n"

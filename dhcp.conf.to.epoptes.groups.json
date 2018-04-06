@@ -1,7 +1,11 @@
 #!/bin/bash
 
-
-# Reads from DHCP config and produces "groups.json" file for epoptes, for matching hosts only
+################################################################################
+# dhcp.conf.to.epoptes.groups.json
+################################################################################
+# Reads from DHCP config and produces "groups.json" file for epoptes,
+# for matching hosts only
+################################################################################
 
 if [ $# -ne 1 ]
 then
@@ -14,7 +18,7 @@ WOL=/tmp/wol
 OUTPUT=/util/wol.data
 
 echo reading your $DHCP and extracting network parameters... >&2
-cat $DHCP | /util/dhcpparse.awk | grep -v '^;' > "$WOL"
+cat $DHCP | /util/dhcp.parse.awk | grep -v '^;' > "$WOL"
 
 echo splitting data... >&2
 cut -d';' -f1 "$WOL" > "${WOL}.ip"
