@@ -1,18 +1,27 @@
-#!/bin/sh
+#!/bin/bash
+
+################################################################################
+# copytree src dest
+################################################################################
+# recursively copy a directory, using cpio
+################################################################################
+
 if [ $# -eq 2 ] && [ -d $1 ] 
 then
-if [ ! -d $2 ]
-then
-echo "Creando $2..."
-mkdir $2
-fi
-echo 'Copiando' $1 '-->' $2 ...
-SAVEDIR=$PWD
-cd $1
-#find $1 -depth -print | tee /dev/tty | cpio -pd $2
-find . -print | tee /dev/tty | cpio -upd $2
-cd $SAVEDIR
+  if [ ! -d $2 ]
+  then
+  echo "Creating $2..."
+  mkdir $2
+  fi
+
+  echo 'Copying' $1 '-->' $2 ...
+
+  SAVEDIR=$PWD
+  cd $1
+
+  find . -print | tee /dev/tty | cpio -upd $2
+  cd $SAVEDIR
 else
-printf "Uso:\n\t$0 <src-dir> <dst-dir>\n"
-exit 1
+  printf "\n\nUsage:\n\t$0 <src-dir> <dst-dir>\n"
+  exit 1
 fi

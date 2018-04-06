@@ -1,1 +1,0 @@
-find / -name 'dependency cache' -exec rm -rf {} \; >/dev/null 2>&1 &

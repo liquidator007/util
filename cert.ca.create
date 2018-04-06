@@ -1,5 +1,11 @@
 #!/bin/bash
 
+################################################################################
+# cert.ca.create
+################################################################################
+# create a Certification Authority (CA) and store in /certs hierarchy
+################################################################################
+
 if [ $# -eq 0 ]
 then
   printf "\n\nSyntax:\n\t$0 ca...\n\n"
@@ -44,6 +50,10 @@ do
   chmod 400 $BASE/$CA/private
 
   cd $BASE/$CA
+  
+  touch conf/{serial,index}
+ 
+  echo 01 > conf/serial
 
   cp -uR $BASE/template/conf/ .
 

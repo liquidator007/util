@@ -1,9 +1,0 @@
-if [ $# -ne 1 ]
-then
-  printf "\n\nUso:\n\t$0 <fich pem>\n\n"
-  printf "(la CA debe estar instalada con c_rehash)\n\n\n"
-  exit 1
-fi
-
-openssl verify $1
-

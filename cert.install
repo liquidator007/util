@@ -1,30 +1,36 @@
 #!/bin/bash
 
+################################################################################
+# cert.install
+################################################################################
+# install certificate(s)
+################################################################################
+
 if [ $# -lt 1  ]
 then
-  printf "\nUso: $0 certificado...\n\n"
+  printf "\nUsage:\n\t\t$0 certificate...\n\n"
   exit 1
 fi
 
-ejecutar()
+execute()
 {
-  printf "Ejecutando: $1...\n\n"
+  printf "Executing: $1...\n\n"
   sh -c "$1"
 }
 
 for C in $*
 do
-  echo instalando certificado $C...
-  echo LA HUELLA ES `openssl x509 -noout -fingerprint -in $C` . ¿SEGURO QUE ES DE CONFIANZA? [s/n]
+  echo Installing $C...
+  echo fingerprint is `openssl x509 -noout -fingerprint -in $C` . Are you sure you trust this? [y/n]
   read R
-  if [ $R == 's' ]
+  if [ $R == 'y' ]
   then
-     echo INSTALANDO $C
+     echo Installing $C
      HASH=`openssl x509 -noout -hash -in $C`
-     ejecutar "cp $C /etc/ssl/certs/$C"
-     ejecutar "rm -f /etc/ssl/certs/$HASH.0"
-     ejecutar "ln -s /etc/ssl/certs/$C /etc/ssl/certs/$HASH.0"
+     execute "cp $C /etc/ssl/certs/$C"
+     execute "rm -f /etc/ssl/certs/$HASH.0"
+     execute "ln -s /etc/ssl/certs/$C /etc/ssl/certs/$HASH.0"
   else 
-     echo NO SE INSTALA $C
+     echo not installing $C
   fi 
 done

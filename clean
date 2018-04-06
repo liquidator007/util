@@ -1,5 +1,0 @@
-#!/bin/sh
-echo "Limpiando directorio /tmp y ficheros core..."
-/bin/rm -rf /tmp/* /tmp/.* >/dev/null 2>&1
-find / -mount \( -name core -o -name TRANS.TBL -o -name '*~' -o -name '.*.swp' \) -exec rm -rf {} \; >/dev/null 2>&1
-echo "Fin"

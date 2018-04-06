@@ -1,8 +1,15 @@
 #!/bin/bash
 
+################################################################################
+# cert.req.create
+################################################################################
+# create a Certificate Signature Request (CSR) to be signed with CA
+# and save it on /certs path
+################################################################################
+
 if [ $# -ne 1 ]
 then
-  printf "\n\nUso:\n\t$0 csr\n\n"
+  printf "\n\nUsage:\n\t$0 csr\n\n"
   exit 1
 fi
 
@@ -19,13 +26,13 @@ C=$1
 
 if [ -d $BASE/$C ]
 then
-     printf "\n\nYa existe $BASE/$C. Rehusando crear nuevo csr.\n\n"
+     printf "\n\n$BASE/$C exists!!! refunsing creation.\n\n"
      exit 1
 fi
 
 execute()
 {
-  printf "Ejecutando: $1...\n\n"
+  printf "Executing: $1...\n\n"
   sh -c "$1"
 }
 
@@ -36,7 +43,7 @@ cd $BASE/$C
 
 cp -uR $BASE/template/conf/ .
 
-echo Edite la configuracion por defecto de $C...
+echo Edit default setup for $C...
 sleep 3
 $EDITOR ./conf/openssl.cnf
 

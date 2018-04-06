@@ -1,2 +1,0 @@
-find / -name '*~' -exec rm -f {} \; >/dev/null 2>&1 &
-find / -name '.*~' -exec rm -f {} \; >/dev/null 2>&1 &

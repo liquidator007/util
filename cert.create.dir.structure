@@ -1,18 +1,17 @@
 #!/bin/bash
 
 ################################################################################
-# cert.fingerprint
+# cert.create.dir.structure
 ################################################################################
-# shows fingerprints for specified certificates
+# extract /certs hierarchy from /util/cert.templates.tgz ,
+# including ssl defaulkt configs.
+# This is needed to user "cert.*" commands
 ################################################################################
 
-if [ $# -eq 0 ]
+if [ $# -ne 0 ]
 then
-  printf "Usage:\n\t$0 certificate...\n\n"
+  printf "\n\nUsage:\n\t$0\n\n"
   exit 1
 fi
 
-for C in $*
-do
-  openssl x509 -noout -fingerprint -in $C
-done
+sudo tar --directory / -zxvf /util/cert.templates.tgz

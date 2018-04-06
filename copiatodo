@@ -1,8 +1,0 @@
-F=/util/$0.log
-echo "Comienzo de la copia: `date`" >$F
-#backup -f /ejemplo.dbs /util /cdrom -d /dev/rjt0 -t >>$F 2>&1 <<! 
-#250000
-#
-#!
-tar zcvf /dev/tape -h /util /zip
-echo "Fin de la copia: `date`" >>$F

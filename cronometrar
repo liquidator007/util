@@ -1,1 +1,0 @@
-time -v sh -c 'make clean install modules modules_install' 

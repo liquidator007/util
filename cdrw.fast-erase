@@ -1,3 +1,0 @@
-#!/bin/sh
-
-cdrecord dev=0,0,0 speed=10 blank=fast

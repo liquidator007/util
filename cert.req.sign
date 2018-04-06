@@ -1,8 +1,14 @@
 #!/bin/bash
 
+################################################################################
+# cert.req.sign
+################################################################################
+# sign a CSR stored on /certs and sign it with a CA (also in /certs)
+################################################################################
+
 if [ ! $# -eq 2 ]
 then
-  printf "\n\nUso:\n\t$0 csr ca\n\n"
+  printf "\n\nUsage:\n\t$0 csr ca\n\n"
   exit 1
 fi
 
@@ -23,32 +29,32 @@ CA=$2
 
 if [ ! -d $BASECA/$CA ]
 then
-     printf "\n\nNo existe $BASECA/$CA. Primero cree una CA.\n\n"
+     printf "\n\nNon existent: $BASECA/$CA. Create your CA firstly.\n\n"
      exit 1
 fi
 
 if [ ! -d $BASECSR/$C ]
 then
-     printf "\n\nNo existe $BASECSR/$C. Primero cree un csr.\n\n"
+     printf "\n\nNon existent: $BASECSR/$C. Create your CSR firstly.\n\n"
      exit 1
 fi
 
 if [ -f $BASE/private/$C.pem ]
 then
-     printf "\n\nYa existe $BASE/private/$C.pem. Rehusando crear nuevo certificado.\n\n"
+     printf "\n\n$BASE/private/$C.pem exists!!! Won't be overwritten.\n\n"
      exit 1
 fi
 
 if [ -f $BASE/public/$C.pem ]
 then
-     printf "\n\nYa existe $BASE/public/$C.pem. Rehusando crear nuevo certificado.\n\n"
+     printf "\n\n$BASE/public/$C.pem exists!!! Won't be overwritten\n\n"
      exit 1
 fi
 
 
 execute()
 {
-  printf "Ejecutando: $1...\n\n"
+  printf "Executing: $1...\n\n"
   sh -c "$1"
 }
 
@@ -72,11 +78,6 @@ execute "openssl rsa -in $KEY -out $KEY"
 
 cp $KEY $KEYCOPY
 
-#echo creando certificado...
-#execute "openssl x509 -in $CSR -out $CERT -req $CA_CMD -days $DIAS"
-#echo clave privada en $KEYCOPY
-#echo certificado y clave publica en $CERT
-
 cd $BASECA/$CA
 
 echo Firmando y generando $CERT...
@@ -85,6 +86,6 @@ execute "openssl ca -batch $CNF_CMD -in $CSR -out $CERT  -keyfile $CAKEY -cert $
 chmod 0700 ${BASE}
 chmod 0700 ${BASE}/private
 
-echo Convirtiendo a PKCS#12...
+echo Converting to PKCS#12...
 execute "openssl pkcs12 -export -in $CERT -inkey $KEY -out $P12 -name $P12"
 
