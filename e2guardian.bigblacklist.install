@@ -31,8 +31,9 @@ then
   sudo rm -rf $DANS_BL_UPDATE_DIR
   echo extracting new blacklists to $DANS_CFG_DIR ...
   sudo tar --directory $DANS_CFG_DIR -zxvf $NEWNAME
-  chown -R e2guardian. $DANS_BLACKLIST_DIR
-  touch $DANS_BLACKLIST_DIR/$TESTFILE
+  id -u $DANS_USER &>/dev/null || sudo useradd $DANS_USER
+  sudo chown -R $DANS_USER. $DANS_BLACKLIST_DIR
+  sudo touch $DANS_BLACKLIST_DIR/$TESTFILE
   /util/updbl 1     #mas que nada para crear las listas desordenadas
   echo computing new blacklists \' space usage ...
   du -hs $DANS_BLACKLIST_DIR

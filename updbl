@@ -54,7 +54,7 @@ aplicar_diff()
      cd $RUTA_BLACK
      patch -f -p2 < $RUTA_DIFFS/$1 > $RUTA_DIFFS/$1.log
      #actualizar fecha de TEST_FILE
-     touch --reference=$RUTA_DIFFS/$1 $RUTA_BLACK/$TEST_FILE
+     sudo touch --reference=$RUTA_DIFFS/$1 $RUTA_BLACK/$TEST_FILE
      #archivar el diff
      gzip $RUTA_DIFFS/$1
      echo "fin"
@@ -78,28 +78,28 @@ fi
 if [ ! -f /usr/bin/rl ]
 then
   echo "instalando el paquete ranzomize-lines..."
-  apt-get --assume-yes --force-yes install randomize-lines
+  sudo apt-get --assume-yes --force-yes install randomize-lines
 fi
 
 #existe la ruta de los diffs?
 if [ ! -d $RUTA_DIFFS ]
 then
-  mkdir -p $RUTA_DIFFS 2>/dev/null
+  sudo mkdir -p $RUTA_DIFFS 2>/dev/null
 fi
 
 #permisos ok en RUTA_DIFFS? 
-if [ ! -x $RUTA_DIFFS -o ! -w $RUTA_DIFFS ]
-then
-  echo "No se puede escribir en $RUTA_DIFFS"
-  exit 1
-fi
+#if [ ! -x $RUTA_DIFFS -o ! -w $RUTA_DIFFS ]
+#then
+#  echo "No se puede escribir en $RUTA_DIFFS"
+#  exit 1
+#fi
 
 #permisos ok en RUTA_BLACK? 
-if [ ! -x $RUTA_BLACK -o ! -w $RUTA_BLACK ]
-then
-  echo "No se puede escribir en $RUTA_BLACK"
-  exit 1
-fi
+#if [ ! -x $RUTA_BLACK -o ! -w $RUTA_BLACK ]
+#then
+#  echo "No se puede escribir en $RUTA_BLACK"
+#  exit 1
+#fi
 
 let N=0
 RET=0
@@ -129,13 +129,13 @@ then
   #Ojo, el reload no siempre funciona. Mejor restart.
   printf "recargando e2guardian..." 
 
-  systemctl stop e2guardian
+  sudo systemctl stop e2guardian
 
   #Rematar...
   RET=0
   while [ "$RET" -eq 0 ]
   do
-  killall e2guardian
+  sudo killall e2guardian
   RET=$?
   done
 

@@ -1,10 +1,26 @@
-/*programa encriptador -ENIGMA- */
-/*Basado en la idea expuesta en Investigación y Ciencia
-  Diciembre/1988.
+/*
+
+ENIGMA ciphering machine 
+Basado en la idea expuesta en Investigación y Ciencia
+Based on Investigacion y Ciencia Dec/1988
+(spanish edition of Scientific American)
+
+Author:
+  Miguel Angel Ibanez Mompean
+
+NOTES:
+* "item" (unsigned char) is the "char" unit here (because "char" is signed on *ix systems
+* Wheel size (WHEEL_SIZE) and number of wheels (MAX_WHEELS) parameters can be changed, but encrpyted files WON'T decrypt
+* this program uses pseudo-random numbers. The seed is always the number of wheels.
+  If you modify this number, a completely different set of wheels will be used.
+
+usage:
+  enigma key : crypts and decrypts
+
+example:
+  ls -l | enigma u672 | enigma u672   #unscrambled output
+
 */
-//OJO: Se usa "item" (unsigned char) como unidad de caracter.
-//Esto porque en DOS el tipo char no tiene signo, pero en Unix si,
-//lo cual daba ENORMES problemas de portabilidad.
 
 //#define DEBUG
 #include <stdio.h>
@@ -15,31 +31,31 @@
 #define END   0x2
 #define NEXT  0x0
 
-#define TAMARUEDA 256
-#define MAXRUEDAS 256
+#define WHEEL_SIZE 256
+#define MAX_WHEELS 256
 
 typedef unsigned char item;
-typedef struct _tipo_rueda
+typedef struct _wheel_type
 {
-  item d[TAMARUEDA],i[TAMARUEDA];
+  item d[WHEEL_SIZE],i[WHEEL_SIZE];
   item p;
-} tipo_rueda;
+} wheel_type;
 
-void rellena_rueda (int,tipo_rueda*,int);
+void fill_wheel (int,wheel_type*,int);
 void enigma_eng(item[],unsigned,item*,int,int);
 void cryptfich(FILE *in, FILE *out, item key[]);
 int n(int);
 
 int main (int,char *[]);
 
-tipo_rueda *t[MAXRUEDAS];
-tipo_rueda r; /*reflector*/
-tipo_rueda p; /*panel de conexiones*/
+wheel_type *t[MAX_WHEELS];
+wheel_type r; /*reflector*/
+wheel_type p; /*panel de conexiones*/
 
 int n(int x)
 {
-  while (x<0) x+=TAMARUEDA;
-  return x % TAMARUEDA;
+  while (x<0) x+=WHEEL_SIZE;
+  return x % WHEEL_SIZE;
 }
 
 void semilla(int n)
@@ -47,136 +63,136 @@ void semilla(int n)
 	srand(n);
 }
 
-int aleatorio(void)
+int randomnumber(void)
 {
 	return rand();
 }
 
-void rellena_rueda (int numrueda,tipo_rueda *rueda,int reflector)
+void fill_wheel (int numwheel,wheel_type *wheel,int reflector)
 {
   item c;
   int i,a,b;
-  if (TAMARUEDA%2)
+  if (WHEEL_SIZE%2)
   {
-    fprintf(stderr,"enigma(): Código no par. No se crean ruedas");
+    fprintf(stderr,"enigma(): Código no par. No se crean wheels");
     return;
   }
-  rueda->p=0;
-  semilla(numrueda);
+  wheel->p=0;
+  semilla(numwheel);
   if (reflector)
   { /*Crear reflector. El reflector no usa codificación inversa*/
     int dst1,dst2;
 
-    //cargar la rueda con los valores iniciales
-    //cargar las n/2 primeras posiciones de la rueda con las n/2 últimas	
-    for (i=0 ; i<TAMARUEDA/2 ; i++) rueda->d[i]=i+TAMARUEDA/2;
+    //cargar la wheel con los valores iniciales
+    //cargar las n/2 primeras posiciones de la wheel con las n/2 últimas	
+    for (i=0 ; i<WHEEL_SIZE/2 ; i++) wheel->d[i]=i+WHEEL_SIZE/2;
     //y viceversa
-    for (i=TAMARUEDA/2 ; i<TAMARUEDA ; i++) rueda->d[i]=i-TAMARUEDA/2;
+    for (i=WHEEL_SIZE/2 ; i<WHEEL_SIZE ; i++) wheel->d[i]=i-WHEEL_SIZE/2;
     //permutar un  puñado de veces las conexiones
-    for (i=0; i<(unsigned long)(4*TAMARUEDA); i++)
+    for (i=0; i<(unsigned long)(4*WHEEL_SIZE); i++)
     {
-      a=n(aleatorio());	//a nº al azar entre 0 y TAMARUEDA-1
-      b=n(aleatorio()); //b también
-      if (rueda->d[a]==b || rueda->d[b]==a)
+      a=n(randomnumber());	//a nº al azar entre 0 y WHEEL_SIZE-1
+      b=n(randomnumber()); //b también
+      if (wheel->d[a]==b || wheel->d[b]==a)
 	continue; /* No se hace nada, porque es el mismo enlace */
-      dst1=rueda->d[a]; dst2=rueda->d[b];
-      rueda->d[a]=dst2; rueda->d[dst2]=a;  /*hacer nuevos enlaces*/
-      rueda->d[b]=dst1; rueda->d[dst1]=b;
+      dst1=wheel->d[a]; dst2=wheel->d[b];
+      wheel->d[a]=dst2; wheel->d[dst2]=a;  /*hacer nuevos enlaces*/
+      wheel->d[b]=dst1; wheel->d[dst1]=b;
     }
 #ifdef DEBUG
-    printf("\nReflector(p=%d): ",rueda->p);
-    for (i=0;i<TAMARUEDA; i++) printf("%d,",rueda->d[i]);
+    printf("\nReflector(p=%d): ",wheel->p);
+    for (i=0;i<WHEEL_SIZE; i++) printf("%d,",wheel->d[i]);
     printf("\n");
     // exit(1);
 #endif
   }
   else
-  { /*Crear rueda o panel de conexiones*/
-    for (i=0 ; i<TAMARUEDA ; i++) rueda->d[i]=i;
-    for (i=0; i<(unsigned long)(13*TAMARUEDA); i++)
+  { /*Crear wheel o panel de conexiones*/
+    for (i=0 ; i<WHEEL_SIZE ; i++) wheel->d[i]=i;
+    for (i=0; i<(unsigned long)(13*WHEEL_SIZE); i++)
     {
-      a=n(aleatorio());
-      b=n(aleatorio());
-      c=rueda->d[a]; rueda->d[a]=rueda->d[b]; rueda->d[b]=c;
+      a=n(randomnumber());
+      b=n(randomnumber());
+      c=wheel->d[a]; wheel->d[a]=wheel->d[b]; wheel->d[b]=c;
     }
-    for (i=0;i<TAMARUEDA;i++)
-      rueda->i[rueda->d[i]]=i;
+    for (i=0;i<WHEEL_SIZE;i++)
+      wheel->i[wheel->d[i]]=i;
 #ifdef DEBUG
-    printf("\nRueda(%d): D=",rueda->p);
-    for (i=0;i<TAMARUEDA; i++) printf("%d,",rueda->d[i]);
-    printf("\tRueda(%d): I=",rueda->p);
-    for (i=0;i<TAMARUEDA; i++) printf("%d,",rueda->i[i]);
+    printf("\nWheel(%d): D=",wheel->p);
+    for (i=0;i<WHEEL_SIZE; i++) printf("%d,",wheel->d[i]);
+    printf("\tWheel(%d): I=",wheel->p);
+    for (i=0;i<WHEEL_SIZE; i++) printf("%d,",wheel->i[i]);
 #endif
   }
 }
 
-void enigma_eng(item que[],unsigned cuantos,item *clave,int l,int flag)
+void enigma_eng(item what[],unsigned howmany,item *key,int l,int flag)
 {
   int jj;
   unsigned int i;
-  int rueda;
+  int wheel;
   if (flag&START)
   {
     item cksumr,cksump;//usados para crear semillas al panel y reflec.
-    /* Generar panel, ruedas y reflector, seg£n la clave usada */
-    if (l>MAXRUEDAS)  /* Excedida long. de clave */
+    /* Generar panel, wheels y reflector, seg£n la key usada */
+    if (l>MAX_WHEELS)  /* Excedida long. de key */
     {
-      fprintf(stderr,"enigma(): Longitud de clave excedida!");
+      fprintf(stderr,"enigma(): Longitud de key excedida!");
       exit(1);
     }
     cksumr=cksump=0;
-    for (i=0; i<l; i++)	//para cada letra de la clave
+    for (i=0; i<l; i++)	//para cada letra de la key
     {
-      cksumr+=clave[i]; //computar semilla para crear reflector
-      cksump^=clave[i]; //computar semilla para crear panel
-      if (!(t[i]=malloc(sizeof(tipo_rueda))))  //ubicar rueda en mecanismo
+      cksumr+=key[i]; //computar semilla para crear reflector
+      cksump^=key[i]; //computar semilla para crear panel
+      if (!(t[i]=malloc(sizeof(wheel_type))))  //ubicar wheel en mecanismo
       {
 	fprintf(stderr,"enigma(): Memoria Agotada!");
 	exit(1);
       }
-      rellena_rueda(clave[i]*i,t[i],0);
+      fill_wheel(key[i]*i,t[i],0);
     }
-    rellena_rueda(cksump,&p,0);
-    rellena_rueda(cksumr,&r,1);
+    fill_wheel(cksump,&p,0);
+    fill_wheel(cksumr,&r,1);
 #ifdef DEBUG
-    printf("Ruedas cargadas");
+    printf("Wheels are loaded at this point");
 #endif
   }
-#define D (t[rueda]->d)
-#define I (t[rueda]->i)
-#define P (t[rueda]->p)
-  for (i=0; i<cuantos; i++)
+#define D (t[wheel]->d)
+#define I (t[wheel]->i)
+#define P (t[wheel]->p)
+  for (i=0; i<howmany; i++)
   {  /* Para cada caracter a codificar... */
     item c;
-    c=p.d[que[i]];  /* Codificado por el panel */
-    for (rueda=0; rueda<l; rueda++)
+    c=p.d[what[i]];  /* Codificado por el panel */
+    for (wheel=0; wheel<l; wheel++)
     {
-      /* para cada rueda hacia adelante...*/
+      /* para cada wheel hacia adelante...*/
       jj=n(c+P);
-      //fprintf(stderr,"jj=%d,rueda=%d/%d",jj,rueda,l);
-      c=n(D[jj=n(c+P)]-P+TAMARUEDA);
+      //fprintf(stderr,"jj=%d,wheel=%d/%d",jj,wheel,l);
+      c=n(D[jj=n(c+P)]-P+WHEEL_SIZE);
     }
 
     c=r.d[c]; //rebotando en el reflector...
 
-    for (rueda=l-1; rueda>=0; rueda--)
+    for (wheel=l-1; wheel>=0; wheel--)
     {
-      /* para cada rueda hacia atrás...*/
+      /* para cada wheel hacia atrás...*/
       jj=n(c+P);
-      //fprintf(stderr,"jj=%d,rueda=%d",jj,rueda);
-      c=n(I[jj=n(c+P)]-P+TAMARUEDA);
+      //fprintf(stderr,"jj=%d,wheel=%d",jj,wheel);
+      c=n(I[jj=n(c+P)]-P+WHEEL_SIZE);
     }
-    que[i]=p.i[c];  /* Codificado por el panel y guardado*/
+    what[i]=p.i[c];  /* Codificado por el panel y guardado*/
 
     /*Ajustar rotores a nueva posición */
-    rueda=l-1; //Ajustar la última rueda primero
+    wheel=l-1; //Ajustar la última wheel primero
     do 
     {
       P=n(P+1);
-      //fprintf(stderr,"R%d=%d,",rueda,P);
-      if (P==0 && rueda==0) break;
+      //fprintf(stderr,"R%d=%d,",wheel,P);
+      if (P==0 && wheel==0) break;
       if (P!=0) break;
-      rueda--;
+      wheel--;
     } while (1);
   }
   if (flag&END)
@@ -184,7 +200,7 @@ void enigma_eng(item que[],unsigned cuantos,item *clave,int l,int flag)
     for (i=0; i<l; i++)
       free(t[i]);
   }
-  //fprintf(stderr,"me voy,",rueda,P);
+  //fprintf(stderr,"me voy,",wheel,P);
 }
 
 void cryptfich(FILE *in, FILE *out, item key[])
@@ -206,7 +222,7 @@ void cryptfich(FILE *in, FILE *out, item key[])
   }
 }
 
-#ifdef MACHOTU
+#ifdef TESTING
 void cryptfich(FILE *in, FILE *out, item key[])
 {
   item x[]="Probando este mensaje a ver si se cuelga";
@@ -225,7 +241,7 @@ int main(int argc, char *argv[])
   char op;
   if (argc!=2)
   {
-    fprintf(stderr,"Uso: enigma <clave>\n");
+    fprintf(stderr,"Usage: enigma <key>\n");
     exit(2);
   }
   cryptfich(stdin,stdout,argv[1]);

@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #parametrizacion
-RUTA_DIFFS=/etc/dansguardian/bl.update
-RUTA_BLACK=/etc/dansguardian/blacklists
+RUTA_DIFFS=/etc/e2guardian/bl.update
+RUTA_BLACK=/etc/e2guardian/blacklists
 TEST_FILE=NOMEBORRES.NONONO
 RETROCEDER_DIAS=7
 WAIT=5
@@ -12,20 +12,20 @@ WAIT=5
   echo "ok"
 
   #Ojo, el reload no siempre funciona. Mejor restart.
-  printf "recargando dansguardian..." 
+  printf "recargando e2guardian..." 
 
-  /etc/init.d/dansguardian stop
+  /etc/init.d/e2guardian stop
 
   #Rematar...
   RET=0
   while [ "$RET" -eq 0 ]
   do
-  killall dansguardian
+  killall e2guardian
   RET=$?
   done
 
   sleep 1
-  /etc/init.d/dansguardian start
+  /etc/init.d/e2guardian start
 
   echo "ok"
 
