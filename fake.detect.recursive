@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# fake.detect
+# fake.detect.recursive
 ################################################################################
 # detect files having which extension doesn't match the contect detected by "file"
 # for example, a video file disguished as a "*.pdf" file
@@ -10,33 +10,23 @@
 
 if [ $# -eq 0 ]
 then
-  printf "\n\nUsage:\n\t$0 file...\n\n"
+  printf "\n\nUsage:\n\t$0 folder...\n\n"
   exit 1
 fi
 
-TABLE=/util/fake.table
-
-for F in $*
+for FOLDER in $*
 do
-  EXT=${F##*\.}
-if [ ! -z "$EXT" ]
-then
-  FILE=`file -b "$F"`
-  WHAT=`grep -i $EXT $TABLE | cut -f2 -d':'`
-  grep -i -q  "$WHAT" <<!
-$FILE
-!
-R=$?
-
-if [ $R -eq 2 ]
-then
-  echo $EXT must be defined in $TABLE
-  exit 1
-fi
-
-if [ $R -eq 1 ]
-then
-  echo $F: $FILE
-fi
-fi
+  find $FOLDER \( \
+    -iname '*.pdf' \
+    -o -iname '*.avi' \
+    -o -iname '*.doc' \
+    -o -iname '*.odt' \
+    -o -iname '*.rar' \
+    -o -iname '*.zip' \
+    -o -iname '*.tgz' \
+    -o -iname '*.tar.gz' \
+    -o -iname '*.iso' \
+    -o -iname '*.bin' \
+    -o -iname '*.cue' \
+    \) -exec /util/fake.detect {} \;
 done

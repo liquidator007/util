@@ -1,1 +1,18 @@
-find / -perm -4000 -user root -exec ls -l {} \; 2>/dev/null
+#!/bin/bash
+
+################################################################################
+# find.setuid
+################################################################################
+# find files/dirs having setuid (4000) or setgid (2000)  bit active
+################################################################################
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUsage:\n\t$0 path...\n\n"
+  exit 1
+fi
+
+for R in $*
+do
+  find $R -perm -4000 -o -perm -2000 -user root -exec ls -l {} \; 
+done

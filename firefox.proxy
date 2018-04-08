@@ -1,5 +1,0 @@
-#!/bin/bash
-
-find ~/.mozilla/firefox -name prefs.js -exec cp -f {} {}.sav \;
-
-find ~/.mozilla/firefox -name prefs.js -exec /util/firefox.proxyadd {} \;

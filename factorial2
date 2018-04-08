@@ -1,0 +1,1280 @@
+#!/bin/bash
+
+################################################################################
+# factorial2
+################################################################################
+# computes n!  (n is any real number)
+# for n<0 and n not integer the gamma function will be used
+################################################################################
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUsage:\n\t$0 n\n\n"
+  exit 1
+fi
+
+N=$1
+
+echo $(BC_LINE_LENGTH=0 bc -l << TAG
+
+
+  ## Not to be regarded as suitable for any purpose
+  ## Not guaranteed to return correct answers
+
+scale=100;
+define pi() {
+  auto s;
+  if(scale==(s=scale(pi_)))return pi_
+  if(scale<s)return pi_/1
+  scale+=5;pi_=a(1)*4;scale-=5
+  return pi_/1
+}
+e = e(1);
+define phi(){return((1+sqrt(5))/2)} ; phi = phi()
+define psi(){return((1-sqrt(5))/2)} ; psi = psi()
+
+# Reset base to ten
+obase=ibase=A;
+
+## Integer and Rounding
+
+# Round to next integer nearest 0:  -1.99 -> 1, 0.99 -> 0
+define int(x)   { auto os;os=scale;scale=0;x/=1;scale=os;return(x) } 
+
+# Round down to integer below x
+define floor(x) {
+  auto os,xx;os=scale;scale=0
+  xx=x/1;if(xx>x).=xx--
+  scale=os;return(xx)
+}
+
+# Round up to integer above x
+define ceil(x) {
+  auto os,xx;x=-x;os=scale;scale=0
+  xx=x/1;if(xx>x).=xx--
+  scale=os;return(-xx)
+}
+
+# Fractional part of x:  12.345 -> 0.345
+define frac(x) {
+  auto os,xx;os=scale;scale=0
+  xx=x/1;if(xx>x).=xx--
+  scale=os;return(x-xx)
+}
+
+# Absolute value of x
+define abs(x) { if(x<0)return(-x)else return(x) }
+
+# Sign of x
+define sgn(x) { if(x<0)return(-1)else if(x>0)return(1);return(0) }
+
+# Round x up to next multiple of y
+define round_up(  x,y) { return(y*ceil( x/y )) }
+
+# Round x down to previous multiple of y
+define round_down(x,y) { return(y*floor(x/y )) }
+
+# Round x to the nearest multiple of y
+define round(     x,y) {
+  auto os,oib;
+  os=scale;oib=ibase
+  .=scale++;ibase=A
+    y*=floor(x/y+.5)
+  ibase=oib;scale=os
+  return y
+}
+
+# Find the remainder of x/y
+define int_remainder(x,y) {
+  auto os;
+  os=scale;scale=0
+   x/=1;y/=1;x%=y
+  scale=os
+  return(x)
+}
+define remainder(x,y) {
+  os=scale;scale=0
+   if(x==x/1&&y==y/1){scale=os;return int_remainder(x,y)}
+  scale=os
+  return(x-round_down(x,y))
+}
+
+# Greatest common divisor of x and y
+define int_gcd(x,y) {
+  auto r,os;
+  os=scale;scale=0
+  x/=1;y/=1
+  while(y>0){r=x%y;x=y;y=r}
+  scale=os
+  return(x)
+}
+define gcd(x,y) {
+  auto r,os;
+  os=scale;scale=0
+   if(x==x/1&&y==y/1){scale=os;return int_gcd(x,y)}
+  scale=os
+  while(y>0){r=remainder(x,y);x=y;y=r}
+  return(x)
+}
+
+# Lowest common multiple of x and y
+define int_lcm(x,y) {
+  auto r,m,os;
+  os=scale;scale=0
+  x/=1;y/=1
+  m=x*y
+  while(y>0){r=x%y;x=y;y=r}
+  m/=x
+  scale=os
+  return(m)
+}
+define lcm(x,y) { return (x*y/gcd(x,y)) }
+
+# Remove largest possible power of 2 from x
+define oddpart(x){
+  auto os;
+  os=scale;scale=0;x/=1
+  if(x==0){scale=os;return 1}
+  while(!x%2)x/=2
+  scale=os;return x
+}
+
+# Largest power of 2 in x
+define evenpart(x) {
+  auto os;
+  os=scale;scale=0
+  x/=oddpart(x/1)
+  scale=os;return x
+}
+
+## Trig / Hyperbolic Trig
+
+# Sine
+define sin(x) { return s(x) } # alias for standard library
+# Cosine
+define c(x)   { return s(x+pi()/2) } # as fast or faster than
+define cos(x) { return c(x)        } # . standard library
+# Tangent
+define tan(x)   { auto c;c=c(x);if(c==0)c=A^-scale;return(s(x)/c) }
+
+# Secant
+define sec(x)   { auto c;c=c(x);if(c==0)c=A^-scale;return(   1/c) }
+# Cosecant
+define cosec(x) { auto s;s=s(x);if(s==0)s=A^-scale;return(   1/s) }
+# Cotangent
+define cotan(x) { auto s;s=s(x);if(s==0)s=A^-scale;return(c(x)/s) }
+
+# Arcsine
+define arcsin(x) { if(x==-1||x==1)return(pi()/2*x);return( a(x/sqrt(1-x*x)) ) } 
+# Arccosine
+define arccos(x) { if(x==0)return(0);return pi()/2-arcsin(x) }
+
+# Arctangent (one argument)
+define arctan(x)  { return a(x) } # alias for standard library
+
+# Arctangent (two arguments)
+define arctan2(x,y) { 
+  auto p;
+  if(x==0&&y==0)return(0)
+  p=(1-sgn(y))*pi()*(2*(x>=0)-1)/2
+  if(x==0||y==0)return(p)
+  return(p+a(x/y))
+}
+
+# Arcsecant
+define arcsec(x)      { return( a(x/sqrt(x*x-1)) ) }
+# Arccosecant
+define arccosec(x)    { return( a(x/sqrt(x*x-1))+pi()*(sgn(x)-1)/2 ) }
+# Arccotangent (one argument)
+define arccotan(x)    { return( a(x)+pi()/2 ) }
+# Arccotangent (two arguments)
+define arccotan2(x,y) { return( arctan(x,y)+pi()/2 ) }
+
+# Hyperbolic Sine
+define sinh(x) { auto t;t=e(x);return((t-1/t)/2) }
+# Hyperbolic Cosine
+define cosh(x) { auto t;t=e(x);return((t+1/t)/2) }
+# Hyperbolic Tangent
+define tanh(x) { auto t;t=e(x+x)-1;return(t/(t+2)) }
+
+# Hyperbolic Secant
+define sech(x)   { auto t;t=e(x);return(2/(t+1/t)) }
+# Hyperbolic Cosecant
+define cosech(x) { auto t;t=e(x);return(2/(t-1/t)) }
+# Hyperbolic Cotangent
+define coth(x)   { auto t;t=e(x+x)-1;return((t+2)/t) }
+
+# Hyperbolic Arcsine
+define arcsinh(x) { return( l(x+sqrt(x*x+1)) ) }
+# Hyperbolic Arccosine
+define arccosh(x) { return( l(x+sqrt(x*x-1)) ) }
+# Hyperbolic Arctangent
+define arctanh(x) { return( l((1+x)/(1-x))/2 ) }
+
+# Hyperbolic Arcsecant
+define arcsech(x)   { return( l((sqrt(1-x*x)+1)/x) ) }
+# Hyperbolic Arccosecant
+define arccosech(x) { return( l((sqrt(1+x*x)*sgn(x)+1)/x) ) }
+# Hyperbolic Arccotangent
+define arccoth(x)   { return( l((x+1)/(x-1))/2 ) }
+
+# Length of the diagonal vector (0,0)-(x,y) [pythagoras]
+define pyth(x,y) { return(sqrt(x*x+y*y)) }
+define pyth3(x,y,z) { return(sqrt(x*x+y*y+z*z)) }
+
+# Gudermannian Function
+define gudermann(x)    { return 2*(a(e(x))-a(1)) }
+# Inverse Gudermannian Function
+define arcgudermann(x) {
+  return arctanh(s(x))
+}
+
+# Bessel function
+define besselj(n,x) { return j(n,x) } # alias for standard library
+
+## Exponential / Logs
+
+# Exponential e^x
+define exp(x) { return e(x) } # alias for standard library
+
+# Natural Logarithm (base e)
+define ln(x) {
+  auto os,len,ln;
+  if(x< 0){print "ln error: logarithm of a negative number\n";return 0}
+  if(x==0)print "ln error: logarithm of zero; negative infinity\n"
+  len=length(x)-scale(x)-1
+  if(len<A)return l(x);
+  os=scale;scale+=length(len)+1
+  ln=l(x/A^len)+len*l(A)
+  scale=os
+  return ln/1
+} # speed improvement on standard library
+
+# workhorse function for pow and log - new, less clever version
+# Helps determine whether a fractional power is legitimate for a negative number
+# . expects to be fed a positive value
+# . returns -odd for even/odd; odd2 for odd1/odd2;
+#           even for odd/even;   -2 for irrational
+# . note that the return value is the denominator of the fraction if the
+#   fraction is rational, and the sign of the return value states whether
+#   the numerator is odd (positive) or even (negative)
+# . since even/even is not possible, -2 is used to signify irrational
+define id_frac2_(y){
+  auto os,oib,es,eps,lim,max,p,max2,i,cf[],f[],n,d,t;
+  os=scale
+  if(cf_max){
+    # cf.bc is present!
+    .=cf_new(cf[],y);if(scale(cf[0]))return -2;
+    .=frac_from_cf(f[],cf[],1)
+    d=f[0];scale=0;if(f[1]%2==0)d=-d;scale=os
+   return d
+  }
+  oib=ibase;ibase=A
+  scale=0
+   es=3*os/4
+  scale=os
+   eps=A^-es
+   y+=eps/A
+  scale=es
+   y/=1
+  scale=0
+  if(y<0)y=-y
+  d=y-(n=y/1)
+  if(d<eps){t=2*(n%2)-1;scale=os;ibase=oib;return t}#integers are x/1
+  t=y/2;t=y-t-t
+  # Find numerator and denominator of fraction, if any
+  lim=A*A;max2=A^5*(max=A^int(os/2));p=1
+  i=0;y=t
+  while(1) {
+    scale=es;y=1/y;scale=0
+    y-=(t=cf[++i]=y/1);p*=1+t
+    if(i>lim||(max<p&&p<max2)){cf[i=1]=-2;break}#escape if number seems irrational    
+    if((p>max2||3*length(t)>es+es)&&i>1){cf[i--]=0;break}#cheat: assume rational
+    if(y==0)break;#completely rational
+  }
+  n=1;d=cf[i]
+  if(i==0){print "id_frac2_: something is wrong; y=",y,", d=",d,"\n"}
+  if(d!=-2&&i)while(--i){d=n+cf[i]*(t=d);n=t}
+  if(d<A^os){d*=2*(n%2)-1}else{d=-2}
+  scale=os;ibase=oib
+  return d;
+}
+
+# raise x to integer power y faster than bc's x^y
+# . it seems bc (at time of writing) uses
+# . an O(n) repeated multiplication algorithm
+# . for the ^ operator, which is inefficient given
+# . that there is a simple O(log n) alternative:
+define fastintpow__(x,y) {
+  auto r,hy;
+  if(y==0)return(1)
+  if(y==1)return(x)
+  r=fastintpow__(x,hy=y/2)
+  r*=r;if(hy+hy<y)r*=x
+  return( r )
+}
+define fastintpow_(x,y) {
+  auto ix,os;
+  if(y<0)return fastintpow_(1/x,-y)
+  if(y==0)return(1)
+  if(y==1)return(x)
+  if(x==1)return(1)
+  os=scale;scale=0
+  if(x==-1){y%=2;y+=y;scale=os;return 1-y}
+  # bc is still faster for integers
+  if(x==(ix=x/1)){scale=os;return ix^y}
+  # ...and small no. of d.p.s, but not for values <= 2
+  if(scale(x)<3&&x>2){scale=os;return x^y}
+  scale=os;x/=1;scale=0
+  x=fastintpow__(x,y);
+  scale=os;return x;
+}
+
+# Raise x to a fractional power faster than e^(y*l(x))
+define fastfracpow_(x,y) {
+  auto f,yy,inv;
+  inv=0;if(y<0){y=-y;inv=1}
+  y-=int(y)
+  if(y==0)return 1;
+  if((yy=y*2^C)!=int(yy)){x=l(x);if(inv)x=-x;return e(y/1*x)}
+  # faster using square roots for rational binary fractions
+  # where denominator <= 8192
+  x=sqrt(x)
+  for(f=1;y&&x!=1;x=sqrt(x))if(y+=y>=1){.=y--;f*=x}
+  if(inv)f=1/f;
+  return f;
+}
+
+# Find the yth root of x where y is integer
+define fastintroot_(x,y) {
+  auto os,d,r,ys,eps;
+  os=scale;scale=0;y/=1;scale=os
+  if(y<0){x=1/x;y=-y}
+  if(y==1){return x}
+  if(y>=x-1){return fastfracpow_(x,1/y)}
+  if(y*int((d=2^F)/y)==d){
+    r=1;while(r+=r<=y)x=sqrt(x)
+    return x
+  }
+  scale=length(y)-scale(y);if(scale<5)scale=5;r=e(ln(x)/y)
+  scale=os+5;if(scale<5)scale=5
+  d=1;eps=A^(3-scale)
+  ys=y-1
+  while(d>eps){
+    d=r;r=(ys*r+x/fastintpow_(r,ys))/y
+    d-=r;if(d<0)d=-d
+  }
+  scale=os
+  return r/1
+}
+
+# Raise x to the y-th power
+define pow(x,y) {
+ auto os,p,ix,iy,fy,dn,s;
+ if(y==0) return 1
+ if(x==0) return 0
+ if(0<x&&x<1){x=1/x;y=-y}
+ os=scale;scale=0
+  ix=x/1;iy=y/1;fy=y-iy;dn=0
+ scale=os;#scale=length(x/1)
+ if(y!=iy&&x<0){
+   dn=id_frac2_(y)# -ve implies even numerator
+   scale=0;if(dn%2){# odd denominator
+     scale=os
+     if(dn<0)return  pow(-x,y) # even/odd
+     /*else*/return -pow(-x,y) #  odd/odd
+   }
+   print "pow error: "
+   if(dn>0) print "even root"
+   if(dn<0) print "irrational power"
+   print " of a negative number\n"
+   scale=os;return 0
+ }
+ if(y==iy) {
+   if(x==ix){p=fastintpow_(ix,iy);if(iy>0){scale=0;p/=1};scale=os;return p/1}
+   scale+=scale;p=fastintpow_(x,iy);scale=os;return p/1
+ }
+ if((dn=id_frac2_(y))!=-2){ #accurate rational roots (sometimes slower)
+   if(dn<0)dn=-dn
+   s=1;if(y<0){y=-y;s=-1}
+   p=y*dn+1/2;scale=0;p/=1;scale=os
+   if(p<A^3)x=fastintpow_(x,p)
+   x=fastintroot_(x,dn)
+   if(p>=A^3)x=fastintpow_(x,p)
+   if(s<0)x=1/x
+   return x
+ }
+ p=fastintpow_(ix,iy)*fastfracpow_(x,fy);
+ scale=os+os
+ if(ix)p*=fastintpow_(x/ix,iy)
+ scale=os
+ return p/1
+ #The above is usually faster and more accurate than
+ # return( e(y*l(x)) );
+}
+
+# y-th root of x [ x^(1/y) ]
+define root(x,y) {
+  return pow(x,1/y)
+}
+
+# Specific cube root function
+# = stripped down version of fastintroot_(x,3)
+define cbrt(x) {
+  auto os,d,r,eps;
+  if(x<0)return -cbrt(-x)
+  if(x==0)return 0
+  os=scale;scale=0;eps=A^(scale/3)
+  if(x<eps){scale=os;return 1/cbrt(1/x)}
+  scale=5;r=e(ln(x)/3)
+  scale=os+5;if(scale<5)scale=5
+  d=1;eps=A^(3-scale)
+  while(d>eps){
+    d=r;r=(r+r+x/(r*r))/3
+    d-=r;if(d<0)d=-d
+  }
+  scale=os
+  return r/1
+}
+
+# Logarithm of x in given base:  log(2, 32) = 5 because 2^5 = 32
+#  tries to return a real answer where possible when given negative numbers
+#  e.g.     log(-2,  64) = 6 because (-2)^6 =   64
+#  likewise log(-2,-128) = 7 because (-2)^7 = -128
+define log(base,x) {
+  auto os,i,l,sx,dn,dnm2;
+  if(base==x)return 1;
+  if(x==0){print "log error: logarithm of zero; negative infinity\n";     return  l(0)}
+  if(x==1)return 0;
+  if(base==0){print "log error: zero-based logarithm\n";                  return    0 }
+  if(base==1){print "log error: one-based logarithm; positive infinity\n";return -l(0)}
+  scale+=6
+  if((-1<base&&base<0)||(0<base&&base<1)){x=-log(1/base,x);scale-=6;return x/1}
+  if((-1<x   &&   x<0)||(0<x   &&   x<1)){x=-log(base,1/x);scale-=6;return x/1}
+  if(base<0){
+    sx=1;if(x<0){x=-x;sx=-1}
+    l=log(-base,x)
+    dn=id_frac2_(l)
+    os=scale;scale=0;dnm2=dn%2;scale=os
+    if(dnm2&&dn*sx<0){scale-=6;return l/1}
+    print "log error: -ve base: "
+    if(dnm2)print "wrong sign for "
+    print "implied "
+    if(dnm2)print "odd root/integer power\n"
+    if(!dnm2){
+      if(dn!=-2)print "even root\n"
+      if(dn==-2)print "irrational power\n"
+    }
+    scale-=6;return 0;
+  }
+  if(x<0){
+    print "log error: +ve base: logarithm of a negative number\n"
+    scale-=6;return 0;
+  }
+  x=ln(x)/ln(base);scale-=6;return x/1
+}
+
+# Integer-only logarithm of x in given base
+# (compare digits function in digits.bc)
+define int_log(base,x) { 
+ auto os,p,c;
+ if(0<x&&x<1) {return -int_log(base,1/x)}
+ os=scale;scale=0;base/=1;x/=1
+  if(base<2)base=ibase;
+  if(x==0)    {scale=os;return  1-base*A^os}
+  if(x<base)  {scale=os;return  0    }
+  c=length(x) # cheat and use what bc knows about decimal length
+  if(base==A){scale=os;return c-1}
+  if(base<A){if(x>A){c*=int_log(base,A);c-=2*(base<4)}else{c=0}}else{c/=length(base)+1}
+  p=base^c;while(p<=x){.=c++;p*=base}
+  scale=os;return(c-1)
+}
+
+# Lambert's W function 0 branch; Numerically solves w*e(w) = x for w
+# * is slow to converge near -1/e at high scales
+define lambertw0(x) {
+  auto oib, a, b, w, ow, lx, ew, e1, eps;
+  if(x==0) return 0;
+  oib=ibase;ibase=A
+  ew = -e(-1)
+  if (x<ew) {
+    print "lambertw0: expected argument in range [-1/e,oo)\n"
+    ibase=oib
+    return -1
+  }
+  if (x==ew) {ibase=oib;return -1}
+  # First approximation from :
+  #   http://www.desy.de/~t00fri/qcdins/texhtml/lambertw/
+  #   (A. Ringwald and F. Schrempp)
+  # via Wikipedia
+  if(x < 0){
+    w = x/ew
+  } else if(x < 500){
+    lx=l(x+1);w=0.665*(1+0.0195*lx)*lx+0.04
+  } else if((lx=length(x)-scale(x))>5000) {
+    lx*=l(A);w=lx-(1-1/lx)*l(lx)
+  } else {
+    lx=l(x);w=l(x-4)-(1-1/lx)*l(lx)
+  } 
+  # Iteration adapted from code found on Wikipedia
+  #   apparently by an anonymous user at 147.142.207.26
+  #   and later another at 87.68.32.52
+  ow = 0
+  eps = A^-scale
+  scale += 5
+  e1 = e(1)
+  while(abs(ow-w)>eps&&w>-1){
+    ow = w
+    if(x>0){ew=pow(e1,w)}else{ew=e(w)}
+    a = w*ew
+    b = a+ew
+    a -= x;
+    if(a==0)break
+    b = b/a - 1 + 1/(w+1)
+    w -= 1/b
+    if(x<-0.367)w-=eps
+  }
+  scale -= 5
+  ibase=oib
+  return w/1
+}
+
+# Lambert's W function -1 branch; Numerically solves w*e(w) = x for w
+# * is slow to converge near -1/e at high scales
+define lambertw_1(x) {
+  auto oib,os,oow,ow,w,ew,eps,d,iters;
+  oib=ibase;ibase=A
+  ew = -e(-1)
+  if(ew>x||x>=0) {
+    print "lambertw_1: expected argument in [-1/e,0)\n"
+    ibase=oib
+    if(x==0)return 1-A^scale
+    if(x>0)return 0
+    return -1
+  }
+  if(x==ew) return -1;
+  os=scale
+  eps=A^-os
+  scale+=3
+  oow=ow=0
+  w=x
+  w=l(-w)
+  w-=l(-w)
+  w+=sqrt(eps)
+  iters=0
+  while(abs(ow-w)>eps){
+    oow=ow;ow=w
+    if(w==-1)break
+    w=(x*e(-w)+w*w)/(w+1)
+    if(iters++==A+A||oow==w){iters=0;w-=A^-scale;scale+=2}
+  }
+  scale=os;ibase=oib
+  return w/1
+}
+
+# LambertW wrapper; takes most useful branch based on x
+# to pick a branch manually, use lambertw_1 or lambertw0 directly
+define w(x) {
+  if(x<0)return lambertw_1(x)
+  return lambertw0(x)
+}
+
+# Faster calculation of lambertw0(exp(x))
+# . avoids large intermediate value and associated slowness
+# . numerically solves x = y+ln(y) for y
+define lambertw0_exp(x) {
+  auto oy,y,eps;
+  # Actual calculation is faster for x < 160 or thereabouts
+  if(x<C*D)return lambertw0(e(x));
+  oy=0;y=l(x);y=x-y+y/x;eps=A^-scale
+  while(abs(oy-y)>eps)y=x-l(oy=y)
+  return y
+}
+
+# Shorthand alias for the above
+define w_e(x){ return lambertw0_exp(x) }
+
+# Numerically solve pow(y,y) = x for y
+define powroot(x) {
+  auto r;
+  if(x==0) {
+    print "powroot error: attempt to solve for zero\n"
+    return 0
+  }
+  if(x==1||x==-1) {return x}
+  if(x<=r=e(-e(-1))){
+    print "powroot error: unimplemented for values\n  <0";r
+    return 0
+  }
+  r = ln(x)
+  r /= w(r)
+  return r
+}
+
+## Triangular numbers
+
+# xth triangular number
+define tri(x) {
+  auto xx
+  x=x*(x+1)/2;xx=int(x)
+  if(x==xx)return(xx)
+  return(x)
+}
+
+# 'triangular root' of x
+define trirt(x) {
+  auto xx
+  x=(sqrt(1+8*x)-1)/2;xx=int(x)
+  if(x==xx)x=xx
+  return(x)
+}
+
+# Workhorse for following 2 functions
+define tri_step_(t,s) {
+  auto tt
+  t=t+(1+s*sqrt(1+8*t))/2;tt=int(t)
+  if(tt==t)return(tt)
+  return(t)
+}
+
+# Turn tri(x) into tri(x+1) without knowing x
+define tri_succ(t) {
+  return(tri_step_(t,0+1))
+}
+
+# Turn tri(x) into tri(x-1) without knowing x
+define tri_pred(t) {
+  return(tri_step_(t,0-1))
+}
+
+## Polygonal Numbers
+
+# the xth s-gonal number:
+#   e.g. poly(3, 4) = tri(4) = 1+2+3+4 = 10; poly(4, x) = x*x, etc
+define poly(s, x) {
+  auto xx
+  x*=(s/2-1)*(x-1)+1;xx=int(x);if(x==xx)x=xx
+  return x
+}
+
+# inverse of the above = polygonal root:
+#   e.g. inverse_poly(3,x)=trirt(x); inverse_poly(4,x)=sqrt(x), etc
+define inverse_poly(s, r) {
+  auto t,xx
+  t=(s-=2)-2
+  r=(sqrt(8*s*r+t*t)+t)/s/2;xx=int(r);if(r==xx)r=xx
+  return r
+}
+
+# converse of poly(); solves poly(s,x)=r for s
+#   i.e. if the xth polygonal number is r, how many sides has the polygon?
+#   e.g. if the 5th polygonal number is 15, converse_poly(5,15) = 3
+#     so the polygon must have 3 sides! (15 is the 5th triangular number)
+define converse_poly(x,r) {
+  auto xx
+  x=2*((r/x-1)/(x-1)+1);xx=int(x);if(x==xx)x=xx
+  return x
+}
+
+## Tetrahedral numbers
+
+# nth tetrahedral number
+define tet(n) { return n*(n+1)*(n+2)/6 }
+
+# tetrahedral root = inverse of the above
+define tetrt(t) {
+  auto k,c3,w;
+  if(t==0)return 0
+  if(t<0)return -2-tetrt(-t)
+  k=3^5*t*t-1
+  if(k<0){print "tetrt: unimplemented for 0<|t|<sqrt(3^-5)\n"; return 0}
+  c3=cbrt(3)
+  k=cbrt(sqrt(3*k)+3^3*t)
+  return k/c3^2+1/(c3*k)-1
+}
+
+## Arithmetic-Geometric mean
+
+define arigeomean(a,b) {
+  auto c,s;
+  if(a==b)return a;
+  s=1;if(a<0&&b<0){s=-1;a=-a;b=-b}
+  if(a<0||b<0){print "arigeomean: mismatched signs\n";return 0}
+  while(a!=b){c=(a+b)/2;a=sqrt(a*b);b=c}
+  return s*a
+}
+
+# solve n = arigeomean(x,y)
+define inv_arigeomean(n, y){
+  auto ns,ox,x,b,c,d,i,s,eps;
+  if(n==y)return n;
+  s=1;if(n<0&&y<0){s=-1;n=-n;y=-y}
+  if(n<0||y<0){print "inv_arigeomean: mismatched signs\n";return 0}  
+  if(n<y){x=y;y=n;n=x}
+  n/=y
+  scale+=2;eps=A^-scale;scale+=4
+  ns=scale
+  x=n*(1+ln(n));ox=-1
+  for(i=0;i<A;i++){
+    # try to force quadratic convergence
+    if(abs(x-ox)<eps){i=-1;break}
+    ox=x;scale+=scale
+    b=x+x/n*(n-arigeomean(1,x));
+    c=b+b/n*(n-arigeomean(1,b));
+    d=b+b-c-x
+    if(d){x=(b*b-c*x)/d}else{x=b;i=-1;break}
+    scale=ns
+  }
+  if(i!=-1){
+    # give up and converge linearly
+    x=(x+ox)/2
+    while(abs(x-ox)>eps){ox=x;x+=x/n*(n-arigeomean(1,x))}
+  }
+  x+=5*eps
+  scale-=6;return x*y/s
+}
+
+#!/usr/local/bin/bc -l funcs.bc
+
+### Factorial.BC - Approximations to, and methods for calculating factorials
+ 
+ # Requires funcs.bc
+
+# Gosper's approximation to the natural log of x!
+define gosper(x) {
+ auto os,s,intx,pi;
+ pi=pi();
+ if(x==0)return 0 
+ if(x<0){
+   os=scale;scale=0;intx=x/1;scale=os
+   if(x==intx) return (-1)^x*A^scale
+   x=-x;pi*=x
+   s=s(pix)
+   if(s<=0) return 1-A^scale
+   return l(pix/s)-gosper(x)
+ }
+ return(  x*(l(x)-1) + ( l(2*x+1/3)+ l(pi) )/2  )
+}
+
+# Gosper's approximation to n!
+define gfactorial(n) { return ceil(e(gosper(n))) }
+
+# Nemes' approximation to the natural log of x!
+# with minor tweak to bring it closer to the true value
+define nemes(x) {
+ auto os,s,lx,intx,pix,l10,corr;
+ pix=pi()*x;
+ if(x==0||x==1)return 0 
+ if(x<0){
+   os=scale;scale=0;intx=x/1;scale=os
+   if(x==intx) return (-1)^x*A^scale
+   x=-x;pix=-pix
+   s=s(pix)
+   if(s<=0) return 1-A^scale
+   return l(pix/s)-nemes(x)
+ }
+ lx = l(x)
+ s = x*(lx-1) + l(2*pix)/2 + 1/(C*x + 2/(5*x + (5*A+3)/(4*A+2)/x))
+ l10 = ((A*5*7-3)*E*B+5)/(A*B*(E*F+1)) # approximation to log 10
+ corr = 7*(9/8+lx)
+ if(corr/l10 < scale){
+   #"correcting ";s
+   s -= e(-corr) # minor correction
+ }
+ return s;
+}
+
+# Nemes' approximation to n!
+define nemfactorial(n) {
+  auto a;
+  a=n=nemes(n);if(a<0)a=-a
+  if(a+a>A^scale)return n
+  return e(n)
+}
+
+# Stieltjes approximation to ln(n!)
+define stieltjes(n) {
+  auto oib,os,ln,intn,pin,a[],s,i
+  if(n==0||n==1)return 0 
+  if(n<0){
+    os=scale;scale=0;intn=n/1;scale=os
+    if(n==intn) return (-1)^n*A^scale
+    n=-n;pin=pi()*n;s=s(pin)
+    if(s<=0) return 1-A^scale
+    return l(pin/s)-stieltjes(n)
+  }
+  oib=ibase;ibase=A;scale+=50
+  a[B]=100043420063777451042472529806266909090824649341814868347109676190691/13346384670164266280033479022693768890138348905413621178450736182873
+  a[A]=152537496709054809881638897472985990866753853122697839/24274291553105128438297398108902195365373879212227726
+  a[9]=26370812569397719001931992945645578779849/5271244267917980801966553649147604697542
+  a[8]=455377030420113432210116914702/113084128923675014537885725485;a[7]=29404527905795295658/9769214287853155785;a[6]=109535241009/48264275462
+  a[5]=29944523/19773142;a[4]=22999/22737;a[3]=195/371;a[2]=53/210;a[1]=1/30;a[0]=1/12
+  s=1;for(i=B;i>=0;i--)s=n+a[i]/s;s-=n
+  s+=l(2*pi())/2-n+(n+.5)*l(n)
+  obase=oib;scale-=50;return s/1
+}
+
+# Stieltjes' approximation to n!
+define stielfactorial(n) {
+  auto a;
+  a=n=stieltjes(n);if(a<0)a=-a
+  if(a+a>A^scale)return n
+  return e(n)
+}
+
+# Spouge factorial - workhorse for below
+define spouge_(n,l,exact){
+  auto os,h,tltp,tp,a,k,f,e1,z,iz,fz,d,nm,dm;
+  os=scale;scale=1;h=1/2;scale=os+os
+  if(exact&&os>3){scale=3;a=spouge_(n,0,0);scale=8*length(a)/5+os}
+  tltp=2*l(tp=2*pi());a=lambertw0(A^scale*tltp/tp)/tltp
+  nm=sqrt(tp);dm=1;e1=e(1)
+  f=1;for(k=1;k<a;k++){
+    #z=-e((k-h)*l(a-k)+a-k)*(-1)^k
+    z=(k-h)*l(a-k)+a-k
+    #z=-pow(e1,z)*(-1)^k
+    scale=0
+     iz=z/1;fz=z-iz
+     z=fastintpow__(e1,iz)
+    scale=os+os
+    if(fz>h){z*=e1/e(1-fz)}else{z*=e(fz)}
+    z=-z*(-1)^k
+    d=f*(n+k)
+    nm=nm*d+dm*z
+    dm*=d
+    f*=k
+  }
+  z=(n+h)*l(n+a)-n-a
+  if(l){
+    z+=l(nm/dm)
+  } else {
+    #z=pow(e1,z)*nm/dm
+    z=e(z)*nm/dm
+  }
+  scale=os
+  return z/1
+}
+
+# ... calculate to scale decimal places - slow!
+define spougefactorialx(n) { return spouge_(n,0,1) }
+define spougex(n)          { return spouge_(n,1,1) }
+
+# ... calculate to scale significant figures
+define spougefactorial(n)  { return spouge_(n,0,0) }
+define spouge(n)           { return spouge_(n,1,0) }
+
+# generate the Euler's gamma constant to the current scale
+# . Warning - Slow to calculate
+# . Caches calculated value to save on recalculation for
+# . . same or smaller scales
+define eulergamma() {
+  # Uses fact that eulergamma = -Gamma'(1)
+  auto os,eps,g;
+  if(scale==(os=scale(eulergamma_)))return eulergamma_
+  if(scale<os)return eulergamma_/1
+  os=scale;if(scale<5)scale=5
+  scale=ceil(scale*(A*A+6)/(6*A+7)) # scale/(1-1/e)
+  eps=A^-scale
+  scale+=scale
+  g=(spouge_(-eps,0,0)-spouge_(eps,0,0))/(eps+eps)
+  scale=os;return eulergamma_=g/1
+}
+
+# x! - an approximation to the factorial function over the reals
+#      is accurate as possible for all integers and half-integers
+#      interpolates otherwise
+factorial_substrate_=2
+define factorial_substrate_(n) {
+  if(factorial_substrate_==0)return pow(e(1),gosper(n))
+  if(factorial_substrate_==1)return pow(e(1),nemes(n))
+  if(factorial_substrate_==2)return pow(e(1),stieltjes(n))
+  if(factorial_substrate_==3)return spougefactorial(n)
+  if(factorial_substrate_==4)return spougefactorialx(n)
+  factorial_substrate_=2
+  return factorial_substrate_(n);
+}
+define factorial(x) {
+ auto i,xx,x2,xx2,k,a,b,na,nb,os,oib
+ if(x==0||x==1)return 1
+ oib=ibase;ibase=A
+ if(x==0.5){ibase=oib;return sqrt(pi()/4)}
+ if(0<x&&x<1){
+  .=x++;ibase=oib
+  return factorial(x)/x
+ }
+ os=scale;scale=0;xx=x/1;scale=os
+ if(x<0){
+   if(x==xx) return (-1)^xx*A^scale
+   x=-x;
+   a=pi()*x;
+   ibase=oib
+   return a/s(a)/factorial(x)
+ }
+ x2=x+x
+ os=scale;scale=0;xx2=x2/1;scale=os
+ if(x==xx){
+  xx=1;for(i=x;i>=1;i--)xx*=i
+  ibase=oib
+  return xx;
+ } else if (x2==xx2) {
+  x-=.5
+  xx=1;for(i=x2;i>x;i--)xx*=i
+  scale+=x;
+   xx/=2^(xx2-1)
+   xx*=sqrt(pi()/4)
+  scale-=x;
+  ibase=oib
+  return xx/1;
+ }
+ /* Other factorial cases here */
+ if(factorial_substrate_>=3){ibase=oib;return spouge_(x,0,factorial_substrate_-3)}
+  x2=2*(x-xx)
+  if(x2>.5){
+   x2-=.5
+   xx+=.5
+  }
+  xx+=5
+   a=factorial(            xx    )
+  na=factorial_substrate_( xx    )
+   b=factorial(            xx+0.5)
+  nb=factorial_substrate_( xx+0.5)
+  k=na/a
+  k+=(nb/b-k)*x2
+  xx=factorial_substrate_(x+5)/(k*(x+5)*(x+4)*(x+3)*(x+2)*(x+1))
+ ibase=oib
+ return xx;
+}
+
+define lnfactorial_substrate_(n) {
+  if(factorial_substrate_==0)return    gosper(n)
+  if(factorial_substrate_==1)return     nemes(n)
+  if(factorial_substrate_==2)return stieltjes(n)
+  if(factorial_substrate_==3)return    spouge(n)
+  if(factorial_substrate_==4)return   spougex(n)
+  factorial_substrate_=2
+  return lnfactorial_substrate_(n);
+}
+# logarithm of the above
+define lnfactorial(x) {
+ auto i,xx,x2,xx2,k,a,b,na,nb,os,oib;
+ if(x==0||x==1)return 0
+ oib=ibase;ibase=A
+ if(x==0.5){ibase=oib;return l(pi()/4)/2}
+ if(x<=2470){ibase=oib;return ln(factorial(x))} # l(factorial()) is faster below 2470ish
+ if(x>1000000){ibase=oib;return stieltjes(x)}
+ if(x>10000){ibase=oib;return spouge(x)}
+ if(0<x&&x<1){
+  .=x++
+  return lnfactorial(x)-l(x)
+ }
+ os=scale;scale=0;xx=x/1;scale=os
+ if(x<0){
+   x=-x;
+   a=pi()*x;
+   ibase=oib
+   na = s(a)
+   if(na<=0) return 1-A^scale
+   return l(a/na)-lnfactorial(x)
+ }
+ x2=x+x
+ os=scale;scale=0;xx2=x2/1;scale=os
+ if(x==xx){
+  xx=0.5*x*A^-scale;for(i=x;i>=1;i--)xx+=l(i)
+  ibase=oib
+  return xx;
+ } else if (x2==xx2) {
+  x-=.5
+  xx=0.5*x*A^-scale;for(i=x2;i>x;i--)xx+=l(i)
+  scale+=scale;
+   xx-=(xx2-1)*l(2)
+   xx+=0.5*l(pi()/4)
+  scale=os;
+  ibase=oib
+  return xx/1;
+ }
+ /* Other factorial cases here */
+ if(factorial_substrate_>=3){ibase=oib;return spouge_(x,1,factorial_substrate_-3)}
+  x2=2*(x-xx)
+  if(x2>.5){
+   x2-=.5
+   xx+=.5
+  }
+  xx+=5
+   a=lnfactorial(            xx    )
+  na=lnfactorial_substrate_( xx    )
+   b=lnfactorial(            xx+0.5)
+  nb=lnfactorial_substrate_( xx+0.5)
+  k=na/a
+  k+=(nb/b-k)*x2
+  #k=(11*k-3)/8 # correction
+  xx=(lnfactorial_substrate_(x+5)-l((x+5)*(x+4)*(x+3)*(x+2)*(x+1)))/k
+ ibase=oib
+ return xx;
+}
+
+# Inverse factorial (approximate)
+#   Based on a derivation by David W. Cantrell in sci.math
+define fast_inverse_factorial(x) {
+  auto t,f,eps,os,oib;
+  if(x==1||x==2) return x;
+  oib=ibase;ibase=A;
+  if(0.89<=x&&x<=3.9){
+    os=scale
+    if(scale>25)scale=25
+    eps = A^(5-scale);if(eps>1)eps=1
+    t=x;f=x-factorial(t)
+    while(abs(f)>eps){t+=f/x;f=x-factorial(t)}
+    scale=os;ibase=oib
+    return t
+  }
+  scale += 3
+  t = l((x+0.036534)/sqrt(2*pi()))
+  t /= lambertw0(t/e(1))
+  t -= .5
+  scale -= 3
+  ibase=oib
+  return t/1 
+}
+
+# Inverse factorial (as accurate as possible*)
+#   *Uses current factorial substrate and the above
+#     to iterate to a possible answer
+#   Much slower than the above
+define inverse_factorial(f) {
+  auto os,g0,g1,g2,g3,d,eps
+  eps=A^-scale;scale+=5
+  os=scale
+  g0=fast_inverse_factorial(f)
+  if(g0==f||f<1)return g0;
+  while(abs(g0-g1)>eps){
+    g1=g0
+    g2=g1+(f/factorial_substrate_(g1)-1)/l(g1)
+    if(g2==g1)break
+    g3=g2+(f/factorial_substrate_(g2)-1)/l(g2)
+    if(g3==g2){g0=g2;break}
+    scale+=scale
+     g0=g2
+     d=g2+g2-g1-g3
+     if(d!=0)g0=(g2*g2-g1*g3)/d #glai
+    scale=os
+    g0/=1
+  }
+  scale-=5
+  return g0/1
+}
+
+# Inverse of lnfactorial (approximate)
+define fast_inverse_lnfactorial(x) {
+  auto k,f
+  if(x<=3)return fast_inverse_factorial(e(x));
+  if(x<=6){k=(6-x)/3;f=fast_inverse_factorial(e(x))}
+  x-=l(2*pi())/2
+  x/=lambertw0(x/e(1))
+  x-=1/2
+  if(k)x+=k*(f-x)
+  return x
+}
+
+# Inverse of lnfactorial (as accurate as possible*)
+#   *Uses current lnfactorial substrate and the above
+#     to iterate to a possible answer
+#   Much slower than the above
+define inverse_lnfactorial(x) {
+  auto g0,g1,g2,n,eps
+  eps=A^-scale;scale+=5
+  n=x
+  g0=fast_inverse_lnfactorial(n)
+  if(g0<3){
+    scale-=5
+    return inverse_factorial(e(x))
+  }
+  while(abs(g0-g1)>eps) {
+    g1=fast_inverse_lnfactorial(n+=x-lnfactorial_substrate_(g0))
+    g2=fast_inverse_lnfactorial(n+=x-lnfactorial_substrate_(g1))
+    g0=g2
+  }
+  scale-=5
+  return g0/1
+}
+
+# Number of permutations of r items from a group of n
+# ... using integers only
+define int_permutation(n,r) {
+ auto i,p,os;
+ os=scale;scale=0;n/=1;r/=1
+ if(n<0||r<0||r>n)return(0)
+ p=1;for(i=n;i>n-r;i--)p*=i
+ scale=os;return(p)
+}
+
+# ... using real numbers
+define permutation(n,r) {
+ auto os;os=scale;scale=0
+ if(n==n/1&&r==r/1&&n>=0&&r>=0){scale=os;return int_permutation(n,r)}
+ if(n<0||r<0){scale=os;return factorial(n)/factorial(n-r)}
+ scale=os
+ n=lnfactorial(n)-lnfactorial(n-r)
+ if(n<=5*A^3)return e(n)
+ if(n>=  A^7)print "permutation: calculating huge result; consider using lnpermutation\n"
+ return pow(e(1),n)
+}
+
+# ... logarithm of the above; good for larger n and r
+define lnpermutation(n,r) {
+  return lnfactorial(n)-lnfactorial(n-r)
+}
+
+# Number of combinations of r items from a group of n
+# ... using integers only
+define int_combination(n,r) {
+ auto c,os;
+ os=scale;scale=0;n/=1;r/=1
+ if(n<0||r<0||r>n){scale=os;return(0)}
+ if(r+r>n)r=n-r
+ c=int_permutation(n,r)/factorial(r)
+ scale=os;return(c) 
+}
+
+# ... using real numbers
+define combination(n,r) {
+ auto os;os=scale;scale=0
+ if(n==n/1&&r==r/1&&n>=0&&r>=0){scale=os;return int_combination(n,r)}
+ if(n<0||r<0){scale=os;return factorial(n)/factorial(n-r)/factorial(r)}
+ scale=os
+ n=lnfactorial(n)-lnfactorial(n-r)-lnfactorial(r)
+ if(n<=5*A^3)return e(n)
+ if(n>=  A^7)print "combination: calculating huge result; consider using lncombination\n"
+ return pow(e(1),n)
+}
+
+# ... logarithm of the above; good for larger n and r
+define lncombination(n,r) {
+  return lnfactorial(n)-lnfactorial(n-r)-lnfactorial(r)
+}
+
+# Catalan numbers
+define catalan(n) {
+  auto os,t;
+  if(n==-1)return -1/2;
+  t=n+n;os=scale;scale=0
+  if(n<0)if(t/1==t){
+    t%=2;scale=os
+    if(t)return -1+A^os # -ve half-integers -> infinite
+    return 0            # -ve integers < -1 -> 0
+  }
+  scale=os;n=combination(t,n)/(n+1)
+  scale=0 ;t=n/1;if(n==t)n=t
+  scale=os;return n
+}
+
+# double factorial is also written x!! [not equal to (x!)!]
+define double_factorial(x) {
+ auto i,xx;
+ if(x==0||x==1)return 1
+ xx=int((x+1)/2)
+ if(x<0&&x==xx+xx-1){
+   return (-1)^xx*double_factorial(-2*xx-1)
+ }
+ xx=int(x)
+ if(x==xx){
+  xx=1;for(i=x;i>=1;i-=2)xx*=i
+  return(xx)
+ }
+ x/=2
+ xx=factorial(x)
+ x-=.5
+ xx*=e(x*l(2))
+ xx/=sqrt(pi()/4)
+ return xx
+}
+
+# number of derangements of n
+# . = number of permutations where no element is in its original place
+# Is accurate for integers and performs a naive interpolation otherwise
+define subfactorial(n){
+  auto os,ns,in,fn,a,b,e,sa,sb;
+  if(n<0)return 1-A^scale
+  if(0<n&&n<1)return (subfactorial(n+1)+c(pi()*n))/(n+1)
+  os=scale;scale=0 
+  fn=n-(in=n/1)
+  if(n==in){
+    b=0;for(a=0;a<=n;a++)b=b*a+(-1)^a
+    scale=os;return b
+  }
+  ns=length(factorial(in))-1;if(ns<os)ns=os
+  scale=ns
+    e=e(1);sb=1/2
+    a=factorial(in)/e;b=a*(in+1);n=factorial(n)/e
+  scale=0 ;sa=(a+sb)/1;sb=(b+sb)/1
+  scale=ns;sa/=a;sb/=b
+  scale=os;return n*(sa+fn*(sb-sa))/1
+}
+
+# Returns the lowest common multiple of all numbers 1..x
+define lcmultorial(x) {
+  auto f;
+  x=int(x);if(x<=1)return 1
+  for(f=1;x>1;x--)f=int_lcm(x,f)
+  return f;
+}
+
+# y-th factorial of x: x!_y
+# ... integers only
+define int_multifactorial(y,x) {
+ auto i,xx,os;
+ os=scale;scale=0;x/=1;y/=1
+ xx=1;for(i=x;i>=1;i-=y)xx*=i
+ scale=os;return(xx);
+}
+
+# only works for x==1 mod y # to fix
+#define multifactorial(y,x) {
+# auto os,c[],nc[],t,ix,iy
+# os=scale;scale=0
+# ix=x/1;iy=y/1
+# c[00]=int_multifactorial(iy  ,ix)
+# if(y==iy&&x==ix&&y>=0&&x>=0){scale=os;return c[00]}
+# c[01]=c[00]*(iy  +ix)
+# c[10]=int_multifactorial(iy+1,ix)
+# c[11]=c[10]*(iy+1+ix)
+# scale=os;
+# t=lnfactorial(1/iy)
+#  nc[00]=e((ix-1)*l(iy)/iy+lnfactorial( ix   /iy)-t)
+#  nc[01]=e( ix   *l(iy)/iy+lnfactorial((ix+1)/iy)-t)
+# .=iy++
+# t=lnfactorial(1/iy)
+#  nc[10]=e((ix-1)*l(iy)/iy+lnfactorial( ix   /iy)-t)
+#  nc[11]=e( ix   *l(iy)/iy+lnfactorial((ix+1)/iy)-t)
+# .=iy--
+# for(t=0;t<=11;t++)if(c[t])nc[t]/=c[t]
+# c[0]=nc[00]+(nc[01]-nc[00])*(y-iy)
+# c[1]=nc[10]+(nc[11]-nc[10])*(y-iy)
+# c[0]= c[ 0]+( c[ 1]- c[ 0])*(x-ix)
+# return c[0]*e((x-1)*l(y)/y+lnfactorial(x/y)-lnfactorial(1/y))
+#}
+
+
+#!/usr/local/bin/bc -l funcs.bc factorial.bc
+
+### Factorial_Gamma.BC - Gamma related functions
+ 
+ # Requires funcs.bc and factorial.bc
+
+# These are all but aliases for functions in factorial.bc
+
+define           gamma(x) { return           factorial(x -1) }
+define         lngamma(x) { return         lnfactorial(x -1) }
+define   inverse_gamma(x) { return   inverse_factorial(x)+1  }
+define inverse_lngamma(x) { return inverse_lnfactorial(x)+1  }
+
+# Derivatives of the above
+
+define   beta(x,y) { return   factorial(x-1)*  factorial(y-1)/  factorial(x+y-1) }
+define lnbeta(x,y) { return lnfactorial(x-1)+lnfactorial(y-1)-lnfactorial(x+y-1) }
+
+# For the lowercase Euler gamma constant, see eulergamma() in factorial.bc
+
+
+factorial($N)
+TAG
+)
