@@ -1,0 +1,20 @@
+#!/bin/bash
+
+################################################################################
+# bridge.shows
+################################################################################
+# shows bridge device(s) using "ip" entirely
+################################################################################
+
+
+if [ $# -lt 1 ]
+then
+  printf "\n\nUsage:\n\t$0 bridge-dev...\n\n"
+  exit 1
+fi
+
+for BRIDGE in $*
+do
+  ip link show $BRIDGE
+  bridge link show $BRIDGE
+done

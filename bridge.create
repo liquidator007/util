@@ -1,0 +1,38 @@
+#!/bin/bash
+
+################################################################################
+# bridge.create
+################################################################################
+# creates a bridge device using "ip" entirely
+################################################################################
+
+if [ $# -lt 2 ]
+then
+  printf "\n\nUsage:\n\t$0 bridge-dev ip-addr/mask slave-dev...\n\n"
+  exit 1
+fi
+
+if [ $(whoami) != "root" ]
+then
+  printf "\n\nnot enough privileges!\n\n"
+  exit 1
+fi
+
+BRIDGE=$1
+IP=$2
+DELAY=1
+
+shift; shift
+
+modprobe bridgeing
+ip link add $BRIDGE type bridge
+ip addr add $IP dev $BRIDGE
+
+ip link set dev $BRIDGE up
+
+for IF in $*
+do
+  sleep $DELAY
+  ip link set $IF master $BRIDGE
+done
+
