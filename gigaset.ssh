@@ -1,2 +1,17 @@
-echo l1nux
-ssh -oKexAlgorithms=+diffie-hellman-group1-sha1      root@172.20.254.10
+#!/bin/bash
+
+################################################################################
+# gigaset.ssh
+################################################################################
+# connects to Siemens Gigaset M740AV via ssh
+################################################################################
+
+if [ $# -ne 1 ]
+then
+  printf "\n\nUsage:\n\t$0 user@ip-addr\n\n"
+  exit 1
+fi
+
+
+echo Common user is root, common password is l1nux
+ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 $1

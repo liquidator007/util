@@ -1,6 +1,22 @@
+#!/bin/bash
+
+################################################################################
+# gigaset.format
+################################################################################
+# format disk for Siemens Gigaset M740AV (VDR)
+################################################################################
+
+if [ $# -lt 2 ]
+then
+  exit 1
+fi
+
+
+
+
 if [ $# -ne 1 ]
 then
-  printf "\n\nUso:\n\t$0 dispositivo-particion\n\n"
+  printf "\n\nUsage:\n\t$0 partition-device\n\n"
   exit 1
 fi
 

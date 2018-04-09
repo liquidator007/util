@@ -1,15 +1,18 @@
 #!/bin/bash
 
 ################################################################################
-# git.branch
+# git.file.add
 ################################################################################
-# creates branch or shows current (checked out) branch
+# add file(s)
 ################################################################################
 
-if [ $# -gt 1 ]
+if [ $# -eq 0 ]
 then
-  printf "\n\nUso:\n\t$0 [new branch]\n\n"
+  printf "\n\nUso:\n\t$0 {file | dir}...\n\n"
   exit 1
 fi
 
-git branch $1
+for D in $*
+do
+  git add $D
+done

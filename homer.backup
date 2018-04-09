@@ -1,4 +1,0 @@
-#host:ruta-src:puerto-src:usuario-src:ruta-dst
-
-#homer
-localhost:/etc/:22:root:/BACKUP/homer/etc
