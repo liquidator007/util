@@ -24,7 +24,6 @@ DELAY=1
 
 shift; shift
 
-modprobe bridgeing
 ip link add $BRIDGE type bridge
 ip addr add $IP dev $BRIDGE
 
