@@ -1,7 +1,0 @@
-#host:ruta-src:puerto-src:usuario-src:ruta-dst
-
-#neptune
-www.iescierva.net:/certs/:23:root:/BACKUP/neptune.iescierva.net/certs
-www.iescierva.net:/util/:23:root:/BACKUP/neptune.iescierva.net/util
-www.iescierva.net:/etc/:23:root:/BACKUP/neptune.iescierva.net/etc
-

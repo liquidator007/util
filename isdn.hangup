@@ -1,5 +1,0 @@
-#!/bin/sh
-
-export PATH=/etc/rc.d/init.d:/bin:/sbin:/usr/bin:/usr/sbin:/util
-
-isdnctrl hangup ippp0

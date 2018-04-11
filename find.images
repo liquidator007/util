@@ -6,6 +6,8 @@ do
   pwd
   find . -regex '.*\.[gG][iI][fF]$' -o \
          -regex '.*\.[jJ][pP][eE]?[gG]$' -o \
+         -regex '.*\.[nN][eE][fF]$' -o \
+         -regex '.*\.[pP][nN][gG]$' -o \
          -regex '.*\.[pP][iI][cC]$' -o \
          -regex '.*\.[bB][mM][pP]'
 done
