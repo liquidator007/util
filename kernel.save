@@ -1,7 +1,14 @@
+#!/bin/bash
+
+################################################################################
+# kernel.save
+################################################################################
+# archive kernel version (clean compilations)
+################################################################################
+
 if [ $# -eq 0 ]
 then
-  APP=`basename $0`
-  printf "Uso:\n\t$APP versión-kernel-a-salvar\n\n">&2
+  printf "\n\nUsage:\n\t$0 kernel-version-to-save\n\n">&2
   exit 1
 fi
 
@@ -9,21 +16,20 @@ KERNELDIR=/usr/src/linux-$1
 
 if [ ! -d $KERNELDIR ]
 then
-  printf "$KERNELDIR No Existe o No Es un Directorio\n\n">&2
+  printf "$KERNELDIR not exists or is not a directory\n\n">&2
   exit 1
 fi
 
 CONFIG=kernel\-$1\-`date +"%d-%m-%y"`.config
-printf "Salvando configuración en \"$CONFIG\" (.config)...\n"
+printf "Saving in \"$CONFIG\" (.config)...\n"
 cp $KERNELDIR/.config $CONFIG
 ACTUAL=`pwd`
 
-printf "Limpiando ficheros innecesarios que no se han de archivar...\n"
+printf "Cleaning unnecesary files...\n"
 
 find $KERNELDIR \( -name '*.orig' -o -name '*.o' \) -exec rm {} \;
 
-#determinar el compresor a usar
-printf "Determinando el mejor compresor disponible..."
+printf "Looking for best compression available..."
 bzip2 2>/dev/null
 if [ $? -eq 0 ]
 then
@@ -40,15 +46,15 @@ DIR=$PWD
 OUT=${DIR}/kernel-$1.$EXT
 
 cd /usr/src/linux
-printf "Llamando a Mr. Proper (ahora se llama Don Limpio)...\n"
+printf "Calling Mr. Proper...\n"
 make mrproper >/dev/null 2>&1
 
-printf "Enviando la salida al fichero $OUT...\n"
+printf "Sending output to $OUT...\n"
 cd /usr/src
-printf "Ejecutando: tar cf - linux-$1 | $COMP -f > $OUT\n"
+printf "Executing: tar cf - linux-$1 | $COMP -f > $OUT\n"
 tar cf - linux-$1 | $COMP -f > $OUT
 
-printf "Recuperando configuración $CONFIG a .config...\n"
+printf "recovering configuration file $CONFIG to .config...\n"
 cd $ACTUAL
 cp $CONFIG $KERNELDIR/.config 
 

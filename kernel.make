@@ -1,9 +1,11 @@
-#!/bin/sh
-#
-#kernel.make
-#
-#compilar el kernel existente en /usr/src/linux, con modulos, e instalarlo.
-#deja una copia del .config en /config
+#!/bin/bash
+
+################################################################################
+# kernel.make
+################################################################################
+# compile kernel under /usr/src/linux, modules, then install
+# a copy of .config will be left in /config
+################################################################################
 
 PATH=/bin:/sbin:$PATH
 LENG=$LANG
@@ -17,9 +19,7 @@ UNAME=`uname -n`
 
 if [ $# -gt 1 ]
 then
-  echo
-  echo "Error:\n"
-  echo "Uso: 	$0 [version]\n\n"
+  printf "\n\nUsage:\n\t$0 [version]\n\n"
   exit 1
 fi
 
@@ -35,10 +35,10 @@ export DOCS=$DIR/Documentation/DocBook/
 export LANG=C
 
 echo
-echo "Enviando registro del proceso a $LOG"
+echo "logging to $LOG"
 echo
 
-printf "Cambiando a $DIR..."
+printf "changing to $DIR..."
 cd $DIR > $LOG 2>&1
 if [ $? -ne 0 ]
 then
@@ -142,7 +142,5 @@ fi
 echo OK
 
 export LANG=$LENG
-
-echo "SE RECOMIENDA REVISAR la configuracion de grub / lilo"
 
 cd $OLD

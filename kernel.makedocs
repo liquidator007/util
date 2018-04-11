@@ -1,4 +1,10 @@
-#!/bin/sh
+#!/bin/bash
+
+################################################################################
+# kernel.makedocs
+################################################################################
+# make docs
+################################################################################
 
 PATH=/bin:/sbin:$PATH
 LENG=$LANG
@@ -10,9 +16,7 @@ UNAME=`uname -n`
 
 if [ $# -gt 1 ]
 then
-  echo
-  echo "Error:\n"
-  echo "Uso: 	$0 [version]\n\n"
+  echo "\n\nUsage:$0 [version]\n\n"
   exit 1
 fi
 
@@ -28,10 +32,10 @@ export DOCS=$DIR/Documentation/DocBook/
 export LANG=C
 
 echo
-echo "Enviando registro del proceso a $LOG"
+echo "Logging to $LOG"
 echo
 
-printf "Cambiando a $DIR..."
+printf "changing to $DIR..."
 cd $DIR > $LOG 2>&1
 if [ $? -ne 0 ]
 then
@@ -48,9 +52,9 @@ make psdocs   >> $LOG 2>&1
 echo "Documentos en $DOCS"
 
 CONFIG=`basename $DIR`
-AHORA=`date +"%F-%T"`
-CONFIG=${OLD}/${CONFIG}-${AHORA}.config
-printf "Salvando en:\n"
+NOW=`date +"%F-%T"`
+CONFIG=${OLD}/${CONFIG}-${NOW}.config
+printf "Saving:\n"
 printf "  $CONFIG..."
 cat <.config >$CONFIG
 if [ $? -ne 0 ]

@@ -9,7 +9,7 @@
 
 if [ $# -eq 0 ]
 then
-  printf "\n\nUsage:\n\t$interface..."
+  printf "\n\nUsage:\n\t$0 interface..."
   exit 1
 fi
 

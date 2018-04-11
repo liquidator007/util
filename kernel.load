@@ -1,13 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
-# titulo: kernel.load
-# descripcion: script para instalar fuentes del kernel en /usr/src
-#
+################################################################################
+# kernel.load
+################################################################################
+# install kernel sources under /usr/src
+################################################################################
 
 if [ $# -ne 1 ]
 then
-  APP=`basename $0`
-  printf "Uso:\n\t$APP version-kernel-a-instalar\n\n">&2
+  printf "Usage:\n\n\t$0 kernel-version-to-install\n\n">&2
   exit 1
 fi
 
@@ -15,17 +16,16 @@ KERNELDIR=/usr/src/linux-$1
 
 if [ -d $KERNELDIR ]
 then
-  printf "$KERNELDIR Existe! \n\n">&2
+  printf "$KERNELDIR Exists! \n\n">&2
   exit 1
 fi
 
-#determinar el empaquetado
 SRCDIR=$PWD
 BZ2=$SRCDIR/linux-$1.tar.bz2
 TGZ=$SRCDIR/linux-$1.tgz
 TARGZ=$SRCDIR/linux-$1.tar.gz
 TAR=$SRCDIR/linux-$1.tar
-printf "Seleccionando la mejor distribucion disponible..."
+printf "Selecting..."
 if [ -f $TAR ]
 then
   printf "(.tar)\n"
@@ -39,15 +39,15 @@ elif [ -f $BZ2 ]
 then
   printf "(.bz2)\n"
 else
-  printf "no encontrado\n">&2
+  printf "not found\n">&2
   exit 1
 fi
 
 cd /usr/src
-#printf "Rompiendo el enlace simbolico linux->linux-x.y.z...\n"
+#printf "removing synlink linux->linux-x.y.z...\n"
 #rm -f linux
 
-printf "Extrayendo..."
+printf "Extracting..."
 if [ -f $TAR ]
 then
   tar xf $TAR
@@ -62,8 +62,8 @@ then
   bzip2 -cd $BZ2 | tar xf -
 fi
 
-printf "extraido\n"
-#printf "reajustando el enlace simbolico..."
+printf "extracted\n"
+#printf "creating symlink..."
 #if [ -d linux ]
 #then
 #  mv linux linux-$1
@@ -72,7 +72,7 @@ printf "extraido\n"
 ln -sf linux-$1 linux
 
 #chown -R root.root linux
-printf "Asignando propietario y grupo..."
+printf "changing ownership..."
 chown -R root.root linux-$1
 
 cd $DIR
