@@ -1,18 +1,19 @@
 #!/bin/bash
 
 ################################################################################
-# git.revert
+# git.config.user
 ################################################################################
-# undo public commit(s)
+# configure user info
 ################################################################################
 
-if [ $# -eq 0 ]
+
+if [ $# -ne 2 ]
 then
-  printf "\n\nUsage:\n\t$0 commit-ID...\n\n"
+  printf "\n\nUsage:\n\t$0 name email\n\n"
   exit 1
 fi
 
-for ID in $*
-do
-  git revert $ID
-done
+git config --global user.name $1
+git config --global user.email $2
+
+#git commit --amend --author='Your Name <you@example.com>'

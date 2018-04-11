@@ -1,14 +1,15 @@
 #!/bin/bash
 
-if [ $# -eq 0 ]
+################################################################################
+# git.ignore
+################################################################################
+# edit ".gitignore" file
+################################################################################
+
+if [ $# -ne 0 ]
 then
-  vim .gitignore
-else
-for D in $*
-do
-cd $D && \
-   echo Editar $D/.gitignore...espere... && \
-   sleep 5 && \
-   vim .gitignore
-done
+  printf "\n\nUsage:\n\t$0\n\n"
+  exit 1
 fi
+
+vim .gitignore

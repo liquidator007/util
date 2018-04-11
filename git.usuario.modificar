@@ -1,9 +1,0 @@
-#!/bin/bash
-
-if [ $# -ne 2 ]
-then
-  printf "\n\nUso:\n\t$0 nombre-usuario e-mail...\n\n"
-  exit 1
-fi
-
-git commit --amend --author="$1 <$2>"

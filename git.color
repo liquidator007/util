@@ -1,18 +1,17 @@
 #!/bin/bash
 
 ################################################################################
-# git.file.add
+# git.color
 ################################################################################
-# add file(s)
+# define colors
 ################################################################################
 
-if [ $# -eq 0 ]
+if [ $# -gt 3  ]
 then
-  printf "\n\nUso:\n\t$0 {file | dir}...\n\n"
+  printf "\n\nUsage:\n\t$0 [ color.diff [ color.status [ color.branch ]]]\n(default is auto)\n"
   exit 1
 fi
 
-for D in $*
-do
-  git add $D
-done
+git config --global color.diff ${1-auto} 
+git config --global color.status ${2-auto} 
+git config --global color.branch ${3-auto} 

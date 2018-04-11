@@ -1,9 +1,18 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]
+################################################################################
+# git.patch
+################################################################################
+# applies patch(es)
+################################################################################
+
+if [ $# -eq 0 ]
 then
-  printf "\n\nUso:\n\t$0 branch\n\n"
+  printf "\n\nUsage:\n\t$0 patch...\n\n"
   exit 1
 fi
 
-git format-patch $1 --stdout
+for P in $*
+do
+  git format-patch $1 --stdout
+done

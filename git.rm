@@ -1,18 +1,18 @@
 #!/bin/bash
 
 ################################################################################
-# git.revert
+# git.rm
 ################################################################################
-# undo public commit(s)
+# remove file(s)/dir(s)
 ################################################################################
 
 if [ $# -eq 0 ]
 then
-  printf "\n\nUsage:\n\t$0 commit-ID...\n\n"
+  printf "\n\nUsage:\n\t$0 {file | dir}...\n\n"
   exit 1
 fi
 
-for ID in $*
+for D in $*
 do
-  git revert $ID
+  git rm $D
 done

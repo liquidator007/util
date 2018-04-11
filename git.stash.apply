@@ -1,18 +1,9 @@
 #!/bin/bash
 
 ################################################################################
-# git.revert
+# git.stash.apply
 ################################################################################
-# undo public commit(s)
+# Stash apply
 ################################################################################
 
-if [ $# -eq 0 ]
-then
-  printf "\n\nUsage:\n\t$0 commit-ID...\n\n"
-  exit 1
-fi
-
-for ID in $*
-do
-  git revert $ID
-done
+git stash apply

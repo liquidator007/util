@@ -1,11 +1,14 @@
 #!/bin/bash
 
-#rebase: aplica al branch actual todos los cambios que hayan tenido lugar
-#en el branch $1 desde que actualizamos nuestra copia la ultima vez
+################################################################################
+# git.rebase
+################################################################################
+# apply to current branch all changes from specified branch since last copy
+################################################################################
 
-if [ $# -gt 1 ]
+if [ $# -ne 1 ]
 then
-  printf "\n\nUso:\n\t$0 branch\n\n"
+  printf "\n\nUsage:\n\t$0 branch\n\n"
   exit 1
 fi
 

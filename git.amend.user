@@ -1,18 +1,16 @@
 #!/bin/bash
 
 ################################################################################
-# git.revert
+# git.amend.user
 ################################################################################
-# undo public commit(s)
+# Modifies user
 ################################################################################
 
-if [ $# -eq 0 ]
+
+if [ $# -ne 2 ]
 then
-  printf "\n\nUsage:\n\t$0 commit-ID...\n\n"
+  printf "\n\nUsage:\n\t$0 name email\n\n"
   exit 1
 fi
 
-for ID in $*
-do
-  git revert $ID
-done
+git commit --amend --author="$1 <$2>"

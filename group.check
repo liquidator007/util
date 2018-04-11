@@ -1,18 +1,9 @@
 #!/bin/bash
 
 ################################################################################
-# git.revert
+# group.check
 ################################################################################
-# undo public commit(s)
+# verify integrity of /etc/group and /etc/gshadow
 ################################################################################
 
-if [ $# -eq 0 ]
-then
-  printf "\n\nUsage:\n\t$0 commit-ID...\n\n"
-  exit 1
-fi
-
-for ID in $*
-do
-  git revert $ID
-done
+grpck $*
