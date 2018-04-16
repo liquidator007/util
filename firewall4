@@ -568,10 +568,10 @@ done
 
 for CHAIN in INPUT OUTPUT FORWARD
 do
-  $I4 -A $CHAIN -p icmp -m state --state ESTABLISHED,RELATED $ICMP4_LIMIT -j ACCEPT
   $I4 -A $CHAIN ! -p icmp -m state --state ESTABLISHED,RELATED -j ACCEPT
-  $I6 -A $CHAIN -p icmpv6 -m state --state ESTABLISHED,RELATED $ICMP6_LIMIT -j ACCEPT
+  $I4 -A $CHAIN -p icmp -m state --state ESTABLISHED,RELATED $ICMP4_LIMIT -j ACCEPT
   $I6 -A $CHAIN ! -p icmpv6 -m state --state ESTABLISHED,RELATED -j ACCEPT
+  $I6 -A $CHAIN -p icmpv6 -m state --state ESTABLISHED,RELATED $ICMP6_LIMIT -j ACCEPT
 done
 
 #ABRIR DNS TEMPORAL $$$ (BORRAR TRAS PROBAR)
