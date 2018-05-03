@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ $# -ne 0 ]
+then
+  printf "\n\nUsage:\n\t$0\n\n\n"
+  exit 1
+fi
+
+printf "zfs-fs\tnum-snapshots\n"
+
+for FS in $(zfs list -H -o name)
+do
+NSNAPS=$(zfs list -H -t snapshot -d 1 $FS | wc -l)
+printf "$FS\t$NSNAPS\n"
+done
