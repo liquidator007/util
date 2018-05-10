@@ -81,11 +81,17 @@ cp $KEY $KEYCOPY
 cd $BASECA/$CA
 
 echo Firmando y generando $CERT...
-execute "openssl ca -batch $CNF_CMD -in $CSR -out $CERT  -keyfile $CAKEY -cert $CACERT"
+#execute "openssl ca -batch $CNF_CMD -in $CSR -out $CERT  -keyfile $CAKEY -cert $CACERT"
+#execute "openssl x509 -batch $CNF_CMD -in $CSR -out $CERT  -keyfile $CAKEY -cert $CACERT -extensions v3_req -extfile $BASECSR/$C/$CONF/openssl.cnf"
 
+execute "openssl ca -policy policy_match -out $CERT $CNF_CMD -extensions v3_req -infiles $CSR"
+
+if [ $? -eq 0 ]
+then 
 chmod 0700 ${BASE}
 chmod 0700 ${BASE}/private
 
 echo Converting to PKCS#12...
 execute "openssl pkcs12 -export -in $CERT -inkey $KEY -out $P12 -name $P12"
 
+fi

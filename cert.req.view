@@ -15,6 +15,5 @@ fi
 for CSR in $*
 do
 
-  openssl req -in $CSR -noout -text
-
+  openssl req -noout -text -in $CSR 
 done
