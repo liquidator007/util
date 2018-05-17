@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ $# -ne 0 ]
+then
+  printf "\n\nUsage:\n\t$0\n\n\n"
+  exit 1
+fi
+
+printf "list of holds/releases in current history...\n"
+
+zpool history | egrep '(hold|release)'
