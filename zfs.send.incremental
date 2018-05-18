@@ -22,5 +22,5 @@ then
   exit 1
 fi
 
-echo zfs send -i "${LASTREMOTE}" "${LASTLOCAL}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
-zfs send -i "${LASTREMOTE}" "${LASTLOCAL}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"
+echo zfs send -R -i "${LASTREMOTE}" "${LASTLOCAL}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
+zfs send -R -i "${LASTREMOTE}" "${LASTLOCAL}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"

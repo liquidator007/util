@@ -9,9 +9,13 @@ then
   exit 1
 fi
 
-sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | cut -f 2 -d'@' | sort > /tmp/snap_local
+PREFIX=$(basename $0)
+LOCALFILE=/tmp/$PREFIX.$(date +"%Y-%m-%d_%H-%M-%S").$RANDOM
+REMOTEFILE=/tmp/$PREFIX.$(date +"%Y-%m-%d_%H-%M-%S").$RANDOM
+
+sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | cut -f 2 -d'@' > $LOCALFILE
 R1=$?
-ssh -i $2 $3 "zfs list -t snapshot -d 1 ${4} -H -o name -s creation | cut -f 2 -d'@' | sort" > /tmp/snap_remote
+ssh -i $2 $3 "zfs list -t snapshot -d 1 ${4} -H -o name -s creation | cut -f 2 -d'@' " > $REMOTEFILE
 R2=$?
 
 if [ $R1 -ne 0 ]
@@ -25,8 +29,12 @@ then
   exit 1
 fi
 
-LASTCOMMON=${1}@$(comm -1 -2 /tmp/snap_local /tmp/snap_remote |  awk -F'[ -]' '{print $4$5$6$7,$0}' | sort | tail -1 | cut -f2 -d' ')
+#don't use comm, requires sorted files. fgrep -xf instead
+#LASTCOMMON=${1}@$(comm -1 -2 $LOCALFILE $REMOTEFILE |  awk -F'[ -]' '{print $4$5$6$7,$0}' | sort | tail -1 | cut -f2 -d' ')
+LASTCOMMON=${1}@$(fgrep -xf $LOCALFILE $REMOTEFILE | tail -1)
 LASTLOCAL=$(sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | tail -1 )
+
+rm -f $LOCALFILE $REMOTEFILE
 
 if [ -z "$LASTCOMMON" ]
 then
