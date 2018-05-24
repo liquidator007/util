@@ -52,5 +52,5 @@ then
 fi
 
 echo zfs send -R -i  "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
- 
+
 zfs send -R -i "${LASTCOMMON}" "${LASTLOCAL}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"
