@@ -1,5 +1,17 @@
 #!/bin/bash
 
+################################################################################
+#zfs.send.mbuffer
+################################################################################
+# send a zfs dataset to a remote destination via mbuffer
+# Parameters:
+#   -source dataset
+#   -ssh private key
+#   -destination host
+#   -destination dataset ("zfs receive" -F option will be used)
+#   - "_R" optional: recursive
+################################################################################
+
 #zfs.send.incremental.mbuffer
 #sends the last snapshot of the selected dataset to other machine/dataset, detecting the last, common dataset previously synchronized, in order to optimize incremental transmission
 

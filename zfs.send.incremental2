@@ -1,11 +1,25 @@
 #!/bin/bash
 
+################################################################################
 #zfs.send.incremental2
+################################################################################
+# send a zfs dataset incrementally to a remote destination via ssh pipeline
+# note: a previous full send must exist!
+# Parameters:
+#   -source dataset
+#   -ssh private key
+#   -destination host
+#   -destination dataset ("zfs receive" -F option will be used)
+#   -"_R" optional: recursive
+#   -port: a free port to install the mbuffer listener on
+################################################################################
+
+#zfs.send.incremental.mbuffer
 #sends the last snapshot of the selected dataset to other machine/dataset, detecting the last, common dataset previously synchronized, in order to optimize incremental transmission
 
-if [ $# -ne 4 ]
+if [ $# -lt 4 -o $# -gt 5 ]
 then
-  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset\n\n\n"
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset [-R]\n\n\n"
   exit 1
 fi
 
@@ -51,6 +65,17 @@ then
   exit 1
 fi
 
+#install required packages
+for P in pv 
+do
+  printf "testing command: "
+  which $P 2> /dev/null
+  if [ $? -ne 0 ]
+  then
+    printf "Installing $P...\n"
+    sudo apt install --yes $P
+  fi
+done
 echo zfs send -R -i  "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
 
 zfs send -R -i "${LASTCOMMON}" "${LASTLOCAL}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"
