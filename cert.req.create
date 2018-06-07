@@ -20,7 +20,7 @@ then
 fi
 
 BASE=/certs/requests
-EDITOR=nano
+EDITOR=editor
 
 C=$1
 
