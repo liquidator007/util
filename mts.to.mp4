@@ -19,6 +19,11 @@ do
     extension="${filename##*.}"
     filename="${filename%.*}"
 
+#    echo $filename
+#    echo $pathtofile
+#    echo $extension
+#    echo $filename
+
     if [ $delete -eq 1 ]
     then
       rm -f "${pathtofile}/${filename}.mp4"

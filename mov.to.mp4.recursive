@@ -20,4 +20,3 @@ do
     find "${FOLDER}" -type f -name '*.[mM][oO][vV]' -exec /util/mov.to.mp4 $delete {} \;
   fi
 done 
-

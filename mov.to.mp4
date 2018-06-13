@@ -2,7 +2,7 @@
 
 LOG=/tmp/mov.to.mp4.log
 
-if [ $1 == "-d" ]
+if [ "$1" == "-d" ]
 then 
   delete=1
   shift
@@ -23,8 +23,8 @@ do
     then
       rm -f "${pathtofile}/${filename}.mp4"
     fi
-    echo ffmpeg -threads 10 -i "${F}" -q:a 0 -q:v 0 "${pathtofile}/${filename}.mp4"  >> $LOG  2>&1=$?
-    ffmpeg -threads 10 -i "${F}" -q:a 0 -q:v 0 "${pathtofile}/${filename}.mp4"  >> $LOG  2>&1=$?
+    echo ffmpeg -y -threads 10 -i "${F}" -q:a 0 -q:v 0 "${pathtofile}/${filename}.mp4"  >> $LOG  2>&1
+    ffmpeg -y -threads 10 -i "${F}" -q:a 0 -q:v 0 "${pathtofile}/${filename}.mp4"  >> $LOG  2>&1
     RET=$?
     printf "Converting ${F} to ${pathtofile}/${filename}.mp4..."
     if [ $RET -ne 0 ]
