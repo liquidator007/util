@@ -1,20 +1,28 @@
 #!/bin/bash
 
-. /util/vdr.env
+################################################################################
+# vdr.rm
+################################################################################
+# delete specified recordings into VDR partitions
+# Note: By default, Linux mounts them on /media/user/vdr1...
+# This tool is for VDR users only
+################################################################################
 
 if [ $# -eq 0 ]
 then
-  printf "\n\nUso:\n\t $0 ruta ...\n\nborrará en $D\n\n"
+  printf "\n\nUsage:\n\t $0 recording...\n\n"
   exit 1
 fi
 
-echo borrar $* en las carpetas $D...
+D=$(/util/vdr.env)
+
+echo deleting $* from $D...
 
 for DIR in $D
 do
   for RUTA in $*
   do
-    echo borrando $DIR/$RUTA...
-    rm -rf $DIR/$RUTA
+    echo deleting $DIR/$RUTA...
+    sudo rm -rf $DIR/$RUTA
   done
 done
