@@ -4,7 +4,7 @@
 # cert.create.dir.structure
 ################################################################################
 # extract /certs hierarchy from /util/cert.templates.tgz ,
-# including ssl defaulkt configs.
+# including ssl default configs.
 # This is needed to user "cert.*" commands
 ################################################################################
 

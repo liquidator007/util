@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#This script calls vi editor for every file and, if modified, saves a hidden backup file named PREFIX+filename+TIMESPAMP+logname, in the same path than the original file
+#This script calls $EDITOR for every file and, if modified, saves a hidden backup file named PREFIX+filename+TIMESPAMP+logname, in the same path than the original file
 
 if [ $# -eq 0 ]
 then
@@ -11,6 +11,7 @@ fi
 TIMESTAMP=`date +%Y-%m-%d-%H-%M-%S`
 PREFIX="."
 
+EDITOR=vi
 
 for F in $*
 do
@@ -23,7 +24,7 @@ do
   FPATH=$(/usr/bin/dirname "${F}")
   FNAME=$(/usr/bin/basename "${F}")
   cp "${F}" "${FPATH}/${PREFIX}${FNAME}.${TIMESTAMP}.$(logname)"
-  vi "${F}"
+  ${EDITOR} "${F}"
   diff "${FPATH}/${PREFIX}${FNAME}.${TIMESTAMP}.$(logname)" "${F}"  > /dev/null 2>&1
   CHANGES=$?
   if [ $CHANGES -eq 0 ]
