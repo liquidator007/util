@@ -1,0 +1,32 @@
+#!/bin/bash
+
+################################################################################
+# dir.compare
+################################################################################
+# recursively compare two directories
+################################################################################
+
+if [ $# -ne 2 ]
+then
+  printf "\n\nUso:\n\t$0 dir1 dir2\n\n"
+  exit 1
+fi
+
+if [ ! -d "$1" -o ! -d "$2" ]
+then
+  printf "source and dest must be dirs!\n\n"
+  exit 1
+fi
+
+D1=$(realpath "$1")/
+D2=$(realpath "$2")/
+
+if [ "$D1" == "$D2" ]
+then
+  printf "source and dest are the same!\n\n"
+  exit 1
+fi
+
+printf "comparing $D1 and $D2\n"
+
+diff <(cd "$D1" && find . | sort) <(cd "$D2" && find . | sort)
