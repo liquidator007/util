@@ -10,8 +10,8 @@ LAST=$(/util/zfs.last.snapshot $1)
 
 if [ ! -z "${LAST}" ]
 then
-  echo zfs send ${5} "${LAST}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
-  zfs send ${5} "${LAST}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"
+  echo zfs send ${5} "${LAST}" \| pv \| ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
+  zfs send ${5} "${LAST}" | pv | ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
 else
   printf "\nNo snapshots, nothing sent!!!\n\n"
   exit 1
