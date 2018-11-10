@@ -29,6 +29,9 @@ R1=$?
 ssh -i $2 $3 "zfs list -t snapshot -d 1 ${4} -H -o name -s creation | cut -f 2 -d'@' " > $REMOTEFILE
 R2=$?
 
+#echo LOCALFILE=$LOCALFILE
+#echo REMOTEFILE=$REMOTEFILE
+
 if [ $R1 -ne 0 ]
 then 
   printf "could't read the local snapshot list for ${1}\n"
@@ -47,7 +50,10 @@ LASTLOCAL=$(sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | tail 
 
 rm -f $LOCALFILE $REMOTEFILE
 
-if [ -z "$LASTCOMMON" ]
+LASTCOMMONNAME="${LASTCOMMON##*@}"
+#echo LASTCOMMONNAME=$LASTCOMMONNAME
+
+if [ -z "$LASTCOMMONNAME" ]
 then
   printf "couldn't find a common snapshot\n"
   exit 1
