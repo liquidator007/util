@@ -3,26 +3,23 @@
 ################################################################################
 #zfs.send.incremental.mbuffer
 ################################################################################
-# send a zfs dataset incrementally to a remote destination via ssh pipeline
+# sends a zfs filesystem incrementally to a remote destination via ssh pipeline
+# sends the last snapshot of the selected dataset to other machine/dataset,
+# detecting the last, common dataset previously synchronized, in order to
+# optimize incremental transmission
+
 # note: a previous full send must exist!
+# note: this operation is always RECURSIVE (-R)
 # Parameters:
-#   -source dataset
+#   -source filesystem (snapshots not allowed)
 #   -ssh private key
 #   -destination host
 #   -destination dataset ("zfs receive" -F option will be used)
-#   -port: a free port to install the mbuffer listener on
-#   -"_R" optional: recursive
 ################################################################################
 
-#zfs.send.incremental.mbuffer
-#sends the last snapshot of the selected dataset to other machine/dataset, detecting the last, common dataset previously synchronized, in order to optimize incremental transmission
-
-BLKSIZE=128k
-BUFSIZE=1G
-
-if [ $# -lt 5 -o $# -gt 6 ]
+if [ $# -ne 4 ]
 then
-  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset port [-R]\n\n\n"
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset\n\n\n"
   exit 1
 fi
 
@@ -34,6 +31,9 @@ sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | cut -f 2 -d'@' > 
 R1=$?
 ssh -i $2 $3 "zfs list -t snapshot -d 1 ${4} -H -o name -s creation | cut -f 2 -d'@' " > $REMOTEFILE
 R2=$?
+
+#echo LOCALFILE=$LOCALFILE
+#echo REMOTEFILE=$REMOTEFILE
 
 if [ $R1 -ne 0 ]
 then 
@@ -53,7 +53,10 @@ LASTLOCAL=$(sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | tail 
 
 rm -f $LOCALFILE $REMOTEFILE
 
-if [ -z "$LASTCOMMON" ]
+LASTCOMMONNAME="${LASTCOMMON##*@}"
+#echo LASTCOMMONNAME=$LASTCOMMONNAME
+
+if [ -z "$LASTCOMMONNAME" ]
 then
   printf "couldn't find a common snapshot\n"
   exit 1
@@ -69,7 +72,7 @@ then
 fi
 
 #install required packages
-for P in pv mbuffer nmap grep
+for P in pv mbuffer
 do
   printf "testing command: "
   which $P 2> /dev/null
@@ -80,24 +83,26 @@ do
   fi
 done
 
-#prepare remote mbuffer for reception
 echo executing remote receive mbuffer...
-echo ssh -i "${2}" "${3}" "mbuffer -q -s $BLKSIZE -m $BUFSIZE -I ${5} \| zfs receive -F ${4}"  &
-     ssh -i "${2}" "${3}" "mbuffer -q -s $BLKSIZE -m $BUFSIZE -I ${5} | zfs receive -F ${4}"  &
+
+BLKSIZE=128k
+BUFSIZE=1G
+PORT=$(/util/random.free.tcp.port)
+
+echo ssh -i "${2}" "${3}" "mbuffer -q -s $BLKSIZE -m $BUFSIZE -I ${PORT} \| zfs receive -F ${4}"  &
+     ssh -i "${2}" "${3}" "mbuffer -q -s $BLKSIZE -m $BUFSIZE -I ${PORT} | zfs receive -F ${4}"  &
 
 sleep 2
 
 #test remote port ready (netcat problem. it fully opens TCP connection, causing remote mbuffer to finish prematurely
 #nc -z -v -w5 ${3} ${5}
 
-#nmap -n -sS -P0 -p ${5} ${3} | grep -q open
-
 if [ $? -eq 0 ]
 then
   #send via mbuffer
   echo executing local send mbuffer...
-  echo zfs send ${6} -i "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| mbuffer -q -s $BLKSIZE -m $BUFSIZE -O ${3}:${5}
-       zfs send ${6} -i "${LASTCOMMON}" "${LASTLOCAL}"  | pv  | mbuffer -q -s $BLKSIZE -m $BUFSIZE -O ${3}:${5}
+  echo zfs send -R -i "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| mbuffer -q -s $BLKSIZE -m $BUFSIZE -O ${3}:${PORT}
+       zfs send -R -i "${LASTCOMMON}" "${LASTLOCAL}"  | pv  | mbuffer -q -s $BLKSIZE -m $BUFSIZE -O ${3}:${PORT}
 else
   echo Error: ${3}:${5} not ready!
   exit 1

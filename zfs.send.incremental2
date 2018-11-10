@@ -3,7 +3,11 @@
 ################################################################################
 #zfs.send.incremental2
 ################################################################################
-# send a zfs filesystem incrementally to a remote destination via ssh pipeline
+# sends a zfs filesystem incrementally to a remote destination via ssh pipeline
+# sends the last snapshot of the selected dataset to other machine/dataset,
+# detecting the last, common dataset previously synchronized, in order to
+# optimize incremental transmission
+
 # note: a previous full send must exist!
 # note: this operation is always RECURSIVE (-R)
 # Parameters:
@@ -11,12 +15,11 @@
 #   -ssh private key
 #   -destination host
 #   -destination dataset ("zfs receive" -F option will be used)
-#   -port: a free port to install the mbuffer listener on
 ################################################################################
 
 if [ $# -ne 4 ]
 then
-  printf "\n\nUsage:\n\t$0 src-filesystem ssh-priv-key dest-host dest-dataset\n\n\n"
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset\n\n\n"
   exit 1
 fi
 
