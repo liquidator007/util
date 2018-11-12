@@ -26,6 +26,6 @@ if [ $N -eq 0 ]
 then
 	echo 1
 else
-	Z=$(factorial $(BC_LINE_LENGTH=0 bc <<< "$N - 1" ))
+	Z=$(/util/factorial $(BC_LINE_LENGTH=0 bc <<< "$N - 1" ))
 	echo $(BC_LINE_LENGTH=0 bc <<< "$N * $Z")
 fi
