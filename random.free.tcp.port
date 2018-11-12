@@ -1,0 +1,43 @@
+#!/bin/bash
+
+################################################################################
+#random.tcp.free.port
+################################################################################
+# $1: number of required ports (default 1)
+# $2: begin port (default 2048)
+# $3: spacing (default 32)
+################################################################################
+
+if [ $# -gt 3 ]
+then
+  printf "\n\nUsage:\n\n$0 [num required ports] [start port] [spacing]\n\n"
+  exit 1
+fi
+
+ports="${1:-1}"
+interim="${2:-2048}"
+spacing="${3:-32}"
+
+free_ports=( )
+
+taken_ports=( $( netstat -aln | egrep ^tcp | fgrep LISTEN |
+                         awk '{print $4}' | egrep -o '[0-9]+$' |
+                         sort -n | uniq ) )
+
+interim=$(( interim + (RANDOM % spacing) ))
+
+for taken in "${taken_ports[@]}" 65535
+do
+  while [[ $interim -lt $taken && ${#free_ports[@]} -lt $ports ]]
+  do
+    free_ports+=( $interim )
+    interim=$(( interim + spacing + (RANDOM % spacing) ))
+  done
+  interim=$(( interim > taken + spacing
+              ? interim
+              : taken + spacing + (RANDOM % spacing) ))
+done
+
+[[ ${#free_ports[@]} -ge $ports ]] || return 2
+
+printf '%d\n' "${free_ports[@]}"

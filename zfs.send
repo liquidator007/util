@@ -33,5 +33,5 @@ do
   fi
 done
 
-echo zfs send ${5} "${1}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
-zfs send ${5} "${1}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"
+echo zfs send ${5} "${1}" \| pv \| ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
+zfs send ${5} "${1}" | pv | ssh -i "${2}" "${3}" zfs recv -Fu "${4}"

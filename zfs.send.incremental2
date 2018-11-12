@@ -3,7 +3,11 @@
 ################################################################################
 #zfs.send.incremental2
 ################################################################################
-# send a zfs filesystem incrementally to a remote destination via ssh pipeline
+# sends a zfs filesystem incrementally to a remote destination via ssh pipeline
+# sends the last snapshot of the selected dataset to other machine/dataset,
+# detecting the last, common dataset previously synchronized, in order to
+# optimize incremental transmission
+
 # note: a previous full send must exist!
 # note: this operation is always RECURSIVE (-R)
 # Parameters:
@@ -11,12 +15,11 @@
 #   -ssh private key
 #   -destination host
 #   -destination dataset ("zfs receive" -F option will be used)
-#   -port: a free port to install the mbuffer listener on
 ################################################################################
 
 if [ $# -ne 4 ]
 then
-  printf "\n\nUsage:\n\t$0 src-filesystem ssh-priv-key dest-host dest-dataset\n\n\n"
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset\n\n\n"
   exit 1
 fi
 
@@ -28,6 +31,9 @@ sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | cut -f 2 -d'@' > 
 R1=$?
 ssh -i $2 $3 "zfs list -t snapshot -d 1 ${4} -H -o name -s creation | cut -f 2 -d'@' " > $REMOTEFILE
 R2=$?
+
+#echo LOCALFILE=$LOCALFILE
+#echo REMOTEFILE=$REMOTEFILE
 
 if [ $R1 -ne 0 ]
 then 
@@ -47,7 +53,10 @@ LASTLOCAL=$(sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation | tail 
 
 rm -f $LOCALFILE $REMOTEFILE
 
-if [ -z "$LASTCOMMON" ]
+LASTCOMMONNAME="${LASTCOMMON##*@}"
+#echo LASTCOMMONNAME=$LASTCOMMONNAME
+
+if [ -z "$LASTCOMMONNAME" ]
 then
   printf "couldn't find a common snapshot\n"
   exit 1
@@ -73,6 +82,6 @@ do
     sudo apt install --yes $P
   fi
 done
-echo zfs send -R -i  "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| ssh -i "${2}" "${3}" zfs recv -F "${4}"
+echo zfs send -R -i  "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
 
-zfs send -R -i "${LASTCOMMON}" "${LASTLOCAL}" | pv | ssh -i "${2}" "${3}" zfs recv -F "${4}"
+zfs send -R -i "${LASTCOMMON}" "${LASTLOCAL}" | pv | ssh -i "${2}" "${3}" zfs recv -Fu "${4}"

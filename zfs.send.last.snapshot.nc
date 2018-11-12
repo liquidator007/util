@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#This command uses "nc" (netcat) to avoid compression and speed up the process
+
+
 if [ $# -lt 4 -o $# -gt 5 ]
 then
   printf "\n\nUsage:\n\t$0 filesystem ssh.privkey dest-host dest-dataset [-R]\n\n\n"

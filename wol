@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DATA=/util/wol.data
+DATA=/util.ies/wol.data
 RETRY=3
 DELAY=0.5
 PORT=9		#'discard' port
