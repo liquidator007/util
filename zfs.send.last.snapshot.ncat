@@ -27,8 +27,8 @@ if [ ! -z "${LAST}" ]
 then
   LISTENERTIMEOUT=30
   SLEEP=5
-  BLKSIZE=128k
-  BUFSIZE=1G
+  BLKSIZE=64k
+  BUFSIZE=1M
   PORT=$(/util/random.free.tcp.port 1 6730)
 
   echo receiver: ssh -i ${2} ${3} "ncat --listen --wait ${LISTENERTIMEOUT} ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}"  
