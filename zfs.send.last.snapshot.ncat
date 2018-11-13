@@ -20,7 +20,7 @@ then
 fi
 
 #Find the very recent dataset
-LAST=$(/util/zfs.last.snapshot $1)
+LAST=$(/util/zfs.list.snapshots $1 -S | head -1)
 
 #if exists
 if [ ! -z "${LAST}" ]
