@@ -3,7 +3,7 @@
 ################################################################################
 #zfs.destroy.old.snapshots
 ################################################################################
-# send a zfs dataset to a remote destination via ssh pipeline
+# destroy older snapshots according to selection criteria
 # Parameters:
 #   $1 source dataset (file system or volume)
 #   $2 match string, must be a part of the snapshots to be deleted

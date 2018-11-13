@@ -1,12 +1,41 @@
 #!/bin/bash
 
+################################################################################
 #zfs.list.snapshots
-#  lists snapshots for a filesystem/volume, sorted by creation time
+################################################################################
+# list snapshots
+# Parameters:
+#   $1 source dataset (file system or volume)
+#   $2 sort iby creation date option; -S or -s
+#   $3 match string, must be a part of the snapshots to be deleted
+#   $4 "-r" optional: recursive
+################################################################################
 
-if [ $# -ne 1 ]
+if [ $# -lt 1 -o $# -gt 4 ]
 then
-  printf "\n\nUsage:\n\t$0 filesystem\n\n\n"
+  printf "\n\nUsage:\n\t$0 src-dataset [ -s | -S ] [ match-string ] [-r]\n\n\n"
   exit 1
 fi
 
-sudo zfs list -t snapshot -d 1 "${1}" -H -o name -s creation
+if [ "$4" == "-r" -o "$4" == "-R" ]
+then
+  RECUR="-r"
+else
+  RECUR="-d 1"
+fi
+
+if [ -z "$3" ]
+then
+  EXPR="*"
+fi
+
+if [ -z "$2" ]
+then
+  SORT=""
+else
+  SORT="$2 creation"
+fi
+
+#Don't display this header, other commands use this list
+#echo zfs list -t snapshot -H -o name $SORT $RECUR "${1}" \| egrep "${EXPR}" 
+zfs list -t snapshot -H -o name $SORT $RECUR  "${1}" | egrep "${EXPR}"

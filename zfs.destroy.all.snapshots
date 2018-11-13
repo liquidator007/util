@@ -11,7 +11,7 @@
 
 if [ $# -lt 1 -o $# -gt 2 ]
 then
-  printf "\n\nUsage:\n\t$0 src-dataset [-r]\n\n\n"
+  printf "\n\nUsage:\n\t$0 dataset\n\n\n"
   exit 1
 fi
 
