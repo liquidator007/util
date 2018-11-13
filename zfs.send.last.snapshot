@@ -1,13 +1,27 @@
 #!/bin/bash
 
+################################################################################
+#zfs.send.last.snapshot
+################################################################################
+# send a zfs dataset to a remote destination via ssh pipeline
+# Parameters:
+#   $1 source dataset (file system or volume)
+#   $2 ssh private key
+#   $3 destination host
+#   $4 destination dataset ("zfs receive" -F option will be used)
+#   $5 "-R" optional: recursive
+################################################################################
+
 if [ $# -lt 4 -o $# -gt 5 ]
 then
-  printf "\n\nUsage:\n\t$0 filesystem ssh.privkey dest-host dest-dataset [-R]\n\n\n"
+  printf "\n\nUsage:\n\t$0 src-fs-or-volume ssh.privkey dest-host dest-fs-or-volume [-R]\n\n\n"
   exit 1
 fi
 
+#Find the very recent dataset
 LAST=$(/util/zfs.last.snapshot $1)
 
+#if exists
 if [ ! -z "${LAST}" ]
 then
   echo zfs send ${5} "${LAST}" \| pv \| ssh -i "${2}" "${3}" zfs recv -Fu "${4}"

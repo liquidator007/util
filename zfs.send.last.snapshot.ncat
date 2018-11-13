@@ -1,0 +1,46 @@
+#!/bin/bash
+
+################################################################################
+#zfs.send.last.snapshot
+################################################################################
+# send a zfs dataset to a remote destination via ssh pipeline
+# This command uses "ncat" to avoid compression and speed up the process
+# Parameters:
+#   $1 source dataset
+#   $2 ssh private key
+#   $3 destination host
+#   $4 destination dataset ("zfs receive" -F option will be used)
+#   $5 "-R" optional: recursive
+################################################################################
+
+if [ $# -lt 4 -o $# -gt 5 ]
+then
+  printf "\n\nUsage:\n\t$0 filesystem ssh.privkey dest-host dest-dataset [-R]\n\n\n"
+  exit 1
+fi
+
+#Find the very recent dataset
+LAST=$(/util/zfs.last.snapshot $1)
+
+#if exists
+if [ ! -z "${LAST}" ]
+then
+  LISTENERTIMEOUT=30
+  SLEEP=5
+  BLKSIZE=128k
+  BUFSIZE=1G
+  PORT=$(/util/random.free.tcp.port 1 6730)
+
+  echo receiver: ssh -i ${2} ${3} "ncat --listen --wait ${LISTENERTIMEOUT} ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}"  
+  echo sender:   zfs send ${5} ${LAST} \| mbuffer -q -s $BLKSIZE -m $BUFSIZE \| pv -b \| ncat $3 $PORT
+
+  echo 'prepare sender...'
+  ( sleep $SLEEP; zfs send ${5} "${LAST}" | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -b | ncat $3 $PORT ) &
+
+  echo prepare ncat receiver on port $PORT...
+  ssh -i ${2} ${3} "ncat --listen --wait $LISTENERTIMEOUT ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}" 
+
+else
+  printf "\nNo snapshots, nothing sent!!!\n\n"
+  exit 1
+fi

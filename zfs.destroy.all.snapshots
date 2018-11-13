@@ -1,12 +1,26 @@
 #!/bin/bash
 
+################################################################################
 #zfs.destroy.all.snapshots
+################################################################################
+# send a zfs dataset to a remote destination via ssh pipeline
+# Parameters:
+#   $1 source dataset (file system or volume)
+#   $2 "-r" optional: recursive
+################################################################################
 
-if [ $# -ne 1 ]
+if [ $# -lt 1 -o $# -gt 2 ]
 then
-  printf "\n\nUsage:\n\t$0 src-dataset\n\n\n"
+  printf "\n\nUsage:\n\t$0 src-dataset [-r]\n\n\n"
   exit 1
 fi
 
-echo zfs list -t snapshot -H -o name -S creation -d 1 "${1}" \| xargs --no-run-if-empty -n 1 zfs destroy 
-zfs list -t snapshot -H -o name -S creation -d 1 "${1}" | xargs --no-run-if-empty -n 1 zfs destroy 
+if [ "$2" == "-r" -o "$2" == "-R" ]
+then
+  RECUR="-r"
+else
+  RECUR="-d 1"
+fi
+
+echo zfs list -t snapshot -H -o name -S creation $RECUR "${1}" \| xargs --verbose --no-run-if-empty -n 1 zfs destroy 
+zfs list -t snapshot -H -o name -S creation $RECUR "${1}" | xargs --verbose --no-run-if-empty -n 1 zfs destroy 

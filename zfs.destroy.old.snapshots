@@ -1,6 +1,15 @@
 #!/bin/bash
 
+################################################################################
 #zfs.destroy.old.snapshots
+################################################################################
+# send a zfs dataset to a remote destination via ssh pipeline
+# Parameters:
+#   $1 source dataset (file system or volume)
+#   $2 match string, must be a part of the snapshots to be deleted
+#   $3 num-keep, number of recent snapshots to be kept
+#   $4 "-r" optional: recursive
+################################################################################
 
 if [ $# -lt 3 -o $# -gt 4 ]
 then
@@ -8,8 +17,16 @@ then
   exit 1
 fi
 
+if [ "$4" == "-r" -o "$4" == "-R" ]
+then
+  RECUR="-r"
+else
+  RECUR="-d 1"
+fi
+
+
 N=$3
 let "N++"
 
-echo zfs list -t snapshot -H -o name -S creation -d 1 "${1}" \| egrep "${2}" \| tail -n +$N \| xargs --no-run-if-empty -n 1 zfs destroy "${4}"
-zfs list -t snapshot -H -o name -S creation -d 1  "${1}" | egrep "${2}" | tail -n +$N | xargs --no-run-if-empty -n 1 zfs destroy ${4}
+echo zfs list -t snapshot -H -o name -S creation $RECUR "${1}" \| egrep "${2}" \| tail -n +$N \| xargs --verbose --no-run-if-empty -n 1 zfs destroy "${4}"
+zfs list -t snapshot -H -o name -S creation $RECUR  "${1}" | egrep "${2}" | tail -n +$N | xargs --verbose --no-run-if-empty -n 1 zfs destroy ${4}
