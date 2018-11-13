@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-#zfs.send.incremental
+#zfs.send.incremental.ncap
 ################################################################################
 # sends a zfs filesystem incrementally to a remote destination via ssh pipeline
 # sends the last snapshot of the selected dataset to other machine/dataset,
@@ -82,6 +82,21 @@ do
     sudo apt install --yes $P
   fi
 done
-echo zfs send -R -i  "${LASTCOMMON}" "${LASTLOCAL}" \| pv \| ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
 
 zfs send -R -i "${LASTCOMMON}" "${LASTLOCAL}" | pv | ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
+
+  LISTENERTIMEOUT=30
+  SLEEP=5
+  BLKSIZE=64k
+  BUFSIZE=1M
+  PORT=$(/util/random.free.tcp.port 1 6730)
+
+  echo receiver: ssh -i ${2} ${3} "ncat --listen --wait ${LISTENERTIMEOUT} ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}"
+  echo sender:   zfs send -R -i ${LASTCOMMON} ${LASTLOCAL} \| mbuffer -q -s $BLKSIZE -m $BUFSIZE \| pv -b \| ncat $3 $PORT
+
+  echo 'prepare sender...'
+  ( sleep $SLEEP; zfs send -R -i ${LASTCOMMON} ${LASTLOCAL} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -b | ncat $3 $PORT ) &
+
+  echo prepare ncat receiver on port $PORT...
+  ssh -i ${2} ${3} "ncat --listen --wait $LISTENERTIMEOUT ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}"
+

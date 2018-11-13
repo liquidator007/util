@@ -1,0 +1,49 @@
+#!/bin/bash
+
+################################################################################
+#zfs.send.ncat
+################################################################################
+# send a zfs dataset to a remote destination via ncat
+# Parameters:
+#   $1 source dataset
+#   $2 ssh private key
+#   $3 destination host
+#   $4 destination dataset ("zfs receive" -F option will be used)
+#   $5 "-R" optional: recursive
+################################################################################
+
+if [ $# -lt 4 -o $# -gt 5 ]
+then
+  printf "\n\nUsage:\n\t$0 src-dataset ssh-priv-key dest-host dest-dataset [-R]\n\n\n"
+  exit 1
+fi
+
+#install required packages
+for P in pv
+do
+  printf "testing command: "
+  which $P 2> /dev/null
+  if [ $? -ne 0 ]
+  then
+    printf "Installing $P...\n"
+    sudo apt install --yes $P
+  fi
+done
+
+#echo zfs send ${5} "${1}" \| pv \| ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
+#zfs send ${5} "${1}" | pv | ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
+
+  LISTENERTIMEOUT=30
+  SLEEP=5
+  BLKSIZE=64k
+  BUFSIZE=1M
+  PORT=$(/util/random.free.tcp.port 1 6730)
+
+  echo receiver: ssh -i ${2} ${3} "ncat --listen --wait ${LISTENERTIMEOUT} ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}"
+  echo sender:   zfs send ${5} ${1} \| mbuffer -q -s $BLKSIZE -m $BUFSIZE \| pv -b \| ncat $3 $PORT
+
+  echo 'prepare sender...'
+  ( sleep $SLEEP; zfs send ${5} ${1} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -b | ncat $3 $PORT ) &
+
+  echo prepare ncat receiver on port $PORT...
+  ssh -i ${2} ${3} "ncat --listen --wait $LISTENERTIMEOUT ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}"

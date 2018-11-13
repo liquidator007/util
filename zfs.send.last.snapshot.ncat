@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-#zfs.send.last.snapshot
+#zfs.send.last.snapshot.ncat
 ################################################################################
 # send a zfs dataset to a remote destination via ssh pipeline
 # This command uses "ncat" to avoid compression and speed up the process
