@@ -34,16 +34,17 @@ done
 #zfs send ${5} "${1}" | pv | ssh -i "${2}" "${3}" zfs recv -Fu "${4}"
 
   LISTENERTIMEOUT=30
+  SENDERTIMEOUT=30
   SLEEP=5
   BLKSIZE=64k
   BUFSIZE=1M
   PORT=$(/util/random.free.tcp.port 1 6730)
 
   echo receiver: ssh -i ${2} ${3} "ncat --listen --wait ${LISTENERTIMEOUT} ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}"
-  echo sender:   zfs send ${5} ${1} \| mbuffer -q -s $BLKSIZE -m $BUFSIZE \| pv -b \| ncat $3 $PORT
+  echo sender:   zfs send ${5} ${1} \| mbuffer -q -s $BLKSIZE -m $BUFSIZE \| pv -b \| ncat --wait ${SENDERTIMEOUT} $3 $PORT
 
   echo 'prepare sender...'
-  ( sleep $SLEEP; zfs send ${5} ${1} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -b | ncat $3 $PORT ) &
+  ( sleep $SLEEP; zfs send ${5} ${1} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -b | ncat --wait ${SENDERTIMEOUT} $3 $PORT ) &
 
   echo prepare ncat receiver on port $PORT...
   ssh -i ${2} ${3} "ncat --listen --wait $LISTENERTIMEOUT ${PORT} | mbuffer -q -s $BLKSIZE -m $BUFSIZE | pv -rtab | zfs receive -Fu ${4}"
